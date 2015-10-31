@@ -11,8 +11,9 @@ import pexpect
 
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
-logfile = 'NULL'
-timeout = 30
+SOCAT = '/usr/bin/socat'
+logfile = ''
+timeout = 45
 dumpio = 0
 prompt = '[\r\n][\w\d\-\@]+[#>]'
 MAXREAD = 4000 * 1024
@@ -28,9 +29,9 @@ def usage():
         Options:
         -d              Dump all in/output from beginning
         -l logfile      Define a logfile to send output to
-        -t timeout      Define timeout for commands (default 30 seconds)
+        -t timeout      Define timeout for commands (default 45 seconds)
 '''
-    sys.exit(2)
+    sys.exit(1)
 
 def do_spawn_ssh(myip, myusername, mypassword, mysshconfig=''):
     if mysshconfig != '':
@@ -44,12 +45,29 @@ def do_spawn_ssh(myip, myusername, mypassword, mysshconfig=''):
     mychild.sendline(mypassword)
     return mychild
 
-def do_spawn_telnet(myip, myusername, mypassword):
-    mychild = pexpect.spawn(TELNET, [myip])
+def do_spawn_telnet(myip, myusername, mypassword, mypserver='', mypport=''):
+    if mypserver == '':
+        mychild = pexpect.spawn(TELNET, [myip])
+    else:
+        arglist = ['-,rawer']
+        arg2 = 'socks4:%s:%s:23,socksport=%s' %(mypserver, myip, mypport)
+        arglist.append(arg2)
+        mychild = pexpect.spawn(SOCAT, arglist)
     mychild.maxread = MAXREAD
     if dumpio == 1:
         mychild.logfile_read = sys.stdout
-    do_expect(mychild, 'sername:', 10)
+    myexp = mychild.expect(['sername:', 'ogin:', pexpect.EOF, pexpect.TIMEOUT], timeout=10)
+    if myexp == 0 or myexp == 1:
+        pass
+    elif myexp == 2:
+        print 'ERROR: EOF encountered - %s' %(host)
+        sys.exit(1)
+    elif myexp == 3:
+        print 'ERROR: Timeout encountered - %s' %(host)
+        sys.exit(1)
+    else:
+        print 'ERROR: Unknown expect error - %s' %(host)
+        sys.exit(1)
     mychild.sendline(myusername)
     do_expect(mychild, '[Pp]assword[: ]', 10)
     mychild.sendline(mypassword)
@@ -60,13 +78,13 @@ def do_expect(mychild, myexpect, mytimeout):
     if myexp == 0:
         pass
     elif myexp == 1:
-        print 'EOF encountered'
+        print 'ERROR: EOF encountered - %s' %(host)
         sys.exit(1)
     elif myexp == 2:
-        print 'Timeout encountered'
+        print 'ERROR: Timeout encountered - %s' %(host)
         sys.exit(1)
     else:
-        print 'Unknown error'
+        print 'ERROR: Unknown expect error - %s' %(host)
         sys.exit(1)
     return True
 
@@ -98,14 +116,14 @@ host = args[0]
 try:
     cmdf = open(cmdfile, 'r')
 except IOError:
-    print 'ERROR: Unable to open cmdfile'
-    sys.exit(2)
+    print 'ERROR: Unable to open cmdfile - %s' %(host)
+    sys.exit(1)
 
 try:
     cfgf = open(cfgfile, 'r')
 except IOError:
-    print 'ERROR: Unable to open cfgfile'
-    sys.exit(2)
+    print 'ERROR: Unable to open cfgfile - %s' %(host)
+    sys.exit(1)
 cfgf.close()
 
 config = ConfigParser.ConfigParser()
@@ -113,16 +131,16 @@ config.read(cfgfile)
 
 SQLDB = config.get('DevicesDB', 'path')
 if SQLDB == None:
-    print 'ERROR: Unable to get DB file from CFG file'
-    sys.exit(2)
+    print 'ERROR: Unable to get DB file from CFG file - %s' %(host)
+    sys.exit(1)
 
 db = sqlite3.connect(SQLDB)
 cursor = db.cursor()
 cursor.execute('''SELECT * FROM Devices WHERE Hostname = ? COLLATE NOCASE LIMIT 1''', (host,))
 row = cursor.fetchone()
 if row == None:
-    print 'ERROR: Device does not exist in DB'
-    sys.exit(2)
+    print 'ERROR: Device does not exist in DB - %s' %(host)
+    sys.exit(1)
 else:
     host = row[0]
     ip = row[1]
@@ -138,6 +156,8 @@ password = config.get(authsection, 'password')
 
 if proxy != 0:
     proxysection = 'Proxy' + str(proxy)
+    pserver = config.get(proxysection, 'server')
+    pport = config.get(proxysection, 'port')
     sshconfig = config.get(proxysection, 'sshconfig')
 
 if conn == 'S':
@@ -147,21 +167,30 @@ if conn == 'S':
         child = do_spawn_ssh(ip, username, password)
 elif conn == 'T':
     if proxy != 0:
-        print 'Proxy with Telnet not supported yet'
-        sys.exit(1)
+        child = do_spawn_telnet(ip, username, password, pserver, pport)
     else:
         child = do_spawn_telnet(ip, username, password)
 elif conn == 'F':
-    print 'Cisco Firewalls not supported yet'
-    sys.exit(1)
+    if proxy != 0:
+        child = do_spawn_ssh(ip, username, password, sshconfig)
+    else:
+        child = do_spawn_ssh(ip, username, password)
+    fwprompt = '[\r\n][\w\d\-\@]+[>]'
+    do_expect(child, fwprompt, timeout)
+    child.sendline('enable')
+    do_expect(child, '[Pp]assword[: ]', 10)
+    child.sendline(password)
 else:
-    print 'Invalid connection type'
+    print 'ERROR: Invalid connection type - %s' %(host)
     sys.exit(1)
 
 do_expect(child, prompt, timeout)
 
 if dtype == 'C':
-    child.sendline('term len 0')
+    if conn == 'F':
+        child.sendline('term pager 0')
+    else:
+        child.sendline('term len 0')
     do_expect(child, prompt, timeout)
 elif dtype == 'J':
     child.sendline('set cli screen-length 0')
@@ -172,16 +201,16 @@ elif dtype == 'A':
     child.sendline('term len 0')
     do_expect(child, prompt, timeout)
 else:
-    print 'Invalid device type'
+    print 'ERROR: Invalid device type - %s' %(host)
     sys.exit(1)
 
 child.sendline('')
 
-if logfile != 'NULL':
+if logfile != '':
     try:
         fout = open(logfile, 'wb')
     except IOError:
-        print 'Error opening logfile'
+        print 'ERROR: Error opening logfile - %s' %(host)
         sys.exit(1)
     child.logfile_read = fout
 
