@@ -1,0 +1,8 @@
+
+BUG #001 : Sometimes buffer at the end (just before exit command) is not shown/logged.
+Seen mostly with Cisco ASA FW (getting SSH broken pipe after exit command???).
+Workaround by sending extra CR-LF before exit to flush buffer.
+
+BUG #002 : Router prompt matching "Device#" in "show version" on Cisco 2900/3900 series routers.
+Need to adjust router prompt to exclude this somehow. Does not impact the output too much as the buffer
+will be flushed anyway due to BUG #001.

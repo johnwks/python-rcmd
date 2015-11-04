@@ -2,6 +2,17 @@
 
 # pylint: disable=missing-docstring, locally-disabled, invalid-name, line-too-long, anomalous-backslash-in-string
 
+#
+# BUG #001 : Sometimes buffer at the end (just before exit command) is not shown/logged.
+# Seen mostly with Cisco ASA FW (getting SSH broken pipe after exit command???).
+# Workaround by sending extra CR-LF before exit to flush buffer.
+#
+# BUG #002 : Router prompt matching "Device#" in "show version" on Cisco 2900/3900 series routers.
+# Need to adjust router prompt to exclude this somehow. Does not impact the output too much as the buffer
+# will be flushed anyway due to BUG #001.
+#
+#
+
 import sys
 import re
 import getopt
@@ -15,7 +26,8 @@ SOCAT = '/usr/bin/socat'
 logfile = ''
 timeout = 45
 dumpio = 0
-prompt = '[\r\n][\w\d\-\@]+[#>]'
+prompt = '[\r\n][\w\d\-\@\/]+[#>]'
+passwordPrompt = '[Pp]assword:'
 MAXREAD = 4000 * 1024
 
 
@@ -41,7 +53,7 @@ def do_spawn_ssh(myip, myusername, mypassword, mysshconfig=''):
     mychild.maxread = MAXREAD
     if dumpio == 1:
         mychild.logfile_read = sys.stdout
-    do_expect(mychild, '[Pp]assword[: ]', 10)
+    do_expect(mychild, passwordPrompt, 10)
     mychild.sendline(mypassword)
     return mychild
 
@@ -69,7 +81,7 @@ def do_spawn_telnet(myip, myusername, mypassword, mypserver='', mypport=''):
         print 'ERROR: Unknown expect error - %s' %(host)
         sys.exit(1)
     mychild.sendline(myusername)
-    do_expect(mychild, '[Pp]assword[: ]', 10)
+    do_expect(mychild, passwordPrompt, 10)
     mychild.sendline(mypassword)
     return mychild
 
@@ -170,16 +182,6 @@ elif conn == 'T':
         child = do_spawn_telnet(ip, username, password, pserver, pport)
     else:
         child = do_spawn_telnet(ip, username, password)
-elif conn == 'F':
-    if proxy != 0:
-        child = do_spawn_ssh(ip, username, password, sshconfig)
-    else:
-        child = do_spawn_ssh(ip, username, password)
-    fwprompt = '[\r\n][\w\d\-\@]+[>]'
-    do_expect(child, fwprompt, timeout)
-    child.sendline('enable')
-    do_expect(child, '[Pp]assword[: ]', 10)
-    child.sendline(password)
 else:
     print 'ERROR: Invalid connection type - %s' %(host)
     sys.exit(1)
@@ -187,23 +189,25 @@ else:
 do_expect(child, prompt, timeout)
 
 if dtype == 'C':
-    if conn == 'F':
-        child.sendline('term pager 0')
-    else:
-        child.sendline('term len 0')
-    do_expect(child, prompt, timeout)
+    child.sendline('term len 0')
 elif dtype == 'J':
     child.sendline('set cli screen-length 0')
     do_expect(child, prompt, timeout)
     child.send(chr(0x1b))
     child.send('q')
+    child.sendline('')
 elif dtype == 'A':
     child.sendline('term len 0')
-    do_expect(child, prompt, timeout)
+elif dtype == 'F':
+    child.sendline('enable')
+    do_expect(child, passwordPrompt, 10)
+    child.sendline(password)
+    child.sendline('term pager 0')
 else:
     print 'ERROR: Invalid device type - %s' %(host)
     sys.exit(1)
 
+do_expect(child, prompt, timeout)
 child.sendline('')
 
 if logfile != '':
@@ -221,6 +225,11 @@ for cmd in cmdf:
         child.sendline(line)
 
 do_expect(child, prompt, timeout)
+
+# Send CR-LF to ensure buffer is flushed before exiting.
+child.sendline('')
+do_expect(child, prompt, timeout)
+
 child.sendline('exit')
 
 print
