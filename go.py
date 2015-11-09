@@ -8,6 +8,7 @@ import getopt
 import ConfigParser
 import sqlite3
 import pexpect
+import os
 
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
@@ -17,7 +18,8 @@ timeout = 30
 prompt = '[\r\n][\w\d\-\@\/]+[#>]'
 passwordPrompt = '[Pp]assword:'
 MAXREAD = 4000 * 1024
-
+HostList = []
+HostDict = {}
 
 def usage():
     print 'Usage:\n\t', sys.argv[0], '-i cfgfile [options] host'
@@ -95,10 +97,12 @@ for opt, arg in opts:
     else:
         usage()
 
-if len(args) != 1:
+if len(args) < 1:
     usage()
 
-host = args[0]
+hostregex = 'Hostname NOT NULL'
+for i in args:
+    hostregex += ' AND Hostname LIKE "%%%s%%"' %(i)
 
 try:
     cfgf = open(cfgfile, 'r')
@@ -117,18 +121,60 @@ if SQLDB == None:
 
 db = sqlite3.connect(SQLDB)
 cursor = db.cursor()
-cursor.execute('''SELECT * FROM Devices WHERE Hostname = ? COLLATE NOCASE LIMIT 1''', (host,))
-row = cursor.fetchone()
-if row == None:
-    print 'ERROR: Device does not exist in DB - %s' %(host)
+sqlquery = 'SELECT * FROM Devices WHERE %s' %(hostregex)
+cursor.execute(sqlquery)
+rows = cursor.fetchall()
+if len(rows) == 0:
+    print 'ERROR: Device does not exist in DB - %s' %(args)
     sys.exit(1)
+elif len(rows) == 1:
+    host = rows[0][0]    
+    ip = rows[0][1]
+    dtype = rows[0][2]
+    conn = rows[0][3]
+    proxy = rows[0][4]
+    authid = rows[0][5]
 else:
-    host = row[0]
-    ip = row[1]
-    dtype = row[2]
-    conn = row[3]
-    proxy = row[4]
-    authid = row[5]
+    idx = 1
+    print '   0 QUIT'
+    for row in rows:
+        host = row[0]
+        ip = row[1]
+        dtype = row[2]
+        conn = row[3]
+        proxy = row[4]
+        authid = row[5]
+        if len(rows) > 1:
+            HostDict['index'] = idx
+            HostDict['host'] = host
+            HostDict['ip'] = ip
+            HostDict['dtype'] = dtype
+            HostDict['conn'] = conn
+            HostDict['proxy'] = proxy
+            HostDict['authid'] = authid
+            HostList.append(HostDict.copy())
+            print "%s %s %s" %(str(idx).rjust(4), host.ljust(24), ip)
+            idx += 1
+    inidx = raw_input('Enter selection (default is 1): ')
+    isvalid = False
+    if inidx == '0':
+        print 'Exiting'
+        sys.exit(0)
+    else:
+        if inidx == '':
+            inidx = '1'
+        for j in HostList:
+            if int(j['index']) == int(inidx):
+                isvalid = True
+                host = j['host']
+                ip = j['ip']
+                dtype = j['dtype']
+                conn = j['conn']
+                proxy = j['proxy']
+                authid = j['authid']              
+        if isvalid == False:
+            sys.exit(1)
+
 db.close()
 
 authsection = 'Auth' + str(authid)
@@ -140,6 +186,17 @@ if proxy != 0:
     pserver = config.get(proxysection, 'server')
     pport = config.get(proxysection, 'port')
     sshconfig = config.get(proxysection, 'sshconfig')
+
+os.environ['TERM'] = 'vt100'
+
+if conn == 'S':
+    method = 'SSH'
+elif conn == 'T':
+    method = 'Telnet'
+else:
+    method = 'Unknown'
+
+print '!!! Connecting to %s (%s) via %s !!!' %(host, ip, method)
 
 if conn == 'S':
     if proxy != 0:
@@ -175,5 +232,4 @@ if logfile != '':
 
 child.interact()
 
-print
 print '!!! Completed %s (%s) !!!' %(host, ip)

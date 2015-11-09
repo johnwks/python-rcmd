@@ -9,6 +9,7 @@ import getopt
 import ConfigParser
 import sqlite3
 import pexpect
+import os
 
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
@@ -161,6 +162,8 @@ if proxy != 0:
     pserver = config.get(proxysection, 'server')
     pport = config.get(proxysection, 'port')
     sshconfig = config.get(proxysection, 'sshconfig')
+
+os.environ['TERM'] = 'vt100'
 
 if conn == 'S':
     if proxy != 0:
