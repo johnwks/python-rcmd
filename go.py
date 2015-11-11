@@ -144,17 +144,16 @@ else:
         conn = row[3]
         proxy = row[4]
         authid = row[5]
-        if len(rows) > 1:
-            HostDict['index'] = idx
-            HostDict['host'] = host
-            HostDict['ip'] = ip
-            HostDict['dtype'] = dtype
-            HostDict['conn'] = conn
-            HostDict['proxy'] = proxy
-            HostDict['authid'] = authid
-            HostList.append(HostDict.copy())
-            print "%s %s %s" %(str(idx).rjust(4), host.ljust(24), ip)
-            idx += 1
+        HostDict['index'] = idx
+        HostDict['host'] = host
+        HostDict['ip'] = ip
+        HostDict['dtype'] = dtype
+        HostDict['conn'] = conn
+        HostDict['proxy'] = proxy
+        HostDict['authid'] = authid
+        HostList.append(HostDict.copy())
+        print "%s %s %s" %(str(idx).rjust(4), host.ljust(24), ip)
+        idx += 1
     inidx = raw_input('Enter selection (default is 1): ')
     isvalid = False
     if inidx == '0':
