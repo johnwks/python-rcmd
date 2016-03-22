@@ -121,7 +121,7 @@ if SQLDB == None:
 
 db = sqlite3.connect(SQLDB)
 cursor = db.cursor()
-sqlquery = 'SELECT * FROM Devices WHERE %s' %(hostregex)
+sqlquery = 'SELECT * FROM Devices WHERE %s ORDER BY Hostname ASC' %(hostregex)
 cursor.execute(sqlquery)
 rows = cursor.fetchall()
 if len(rows) == 0:
@@ -179,6 +179,10 @@ db.close()
 authsection = 'Auth' + str(authid)
 username = config.get(authsection, 'username')
 password = config.get(authsection, 'password')
+try:
+    enable_password = config.get(authsection, 'enable_password')
+except ConfigParser.NoOptionError:
+    enable_password = password
 
 if proxy != 0:
     proxysection = 'Proxy' + str(proxy)
@@ -216,7 +220,7 @@ do_expect(child, prompt, timeout)
 if dtype == 'F':
     child.sendline('enable')
     do_expect(child, passwordPrompt, 10)
-    child.sendline(password)
+    child.sendline(enable_password)
     do_expect(child, prompt, timeout)
 
 child.sendline('')

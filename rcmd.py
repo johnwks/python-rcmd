@@ -20,6 +20,7 @@ dumpio = 0
 prompt = '[\r\n][\w\d\-\@\/]+[#>]'
 passwordPrompt = '[Pp]assword:'
 MAXREAD = 4000 * 1024
+LOGINTIMEOUT = 30
 
 
 def usage():
@@ -44,7 +45,7 @@ def do_spawn_ssh(myip, myusername, mypassword, mysshconfig=''):
     mychild.maxread = MAXREAD
     if dumpio == 1:
         mychild.logfile_read = sys.stdout
-    do_expect(mychild, passwordPrompt, 10)
+    do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
     mychild.sendline(mypassword)
     return mychild
 
@@ -59,7 +60,7 @@ def do_spawn_telnet(myip, myusername, mypassword, mypserver='', mypport=''):
     mychild.maxread = MAXREAD
     if dumpio == 1:
         mychild.logfile_read = sys.stdout
-    myexp = mychild.expect(['sername:', 'ogin:', pexpect.EOF, pexpect.TIMEOUT], timeout=10)
+    myexp = mychild.expect(['sername:', 'ogin:', pexpect.EOF, pexpect.TIMEOUT], timeout=LOGINTIMEOUT)
     if myexp == 0 or myexp == 1:
         pass
     elif myexp == 2:
@@ -72,7 +73,7 @@ def do_spawn_telnet(myip, myusername, mypassword, mypserver='', mypport=''):
         print 'ERROR: Unknown expect error - %s' %(host)
         sys.exit(1)
     mychild.sendline(myusername)
-    do_expect(mychild, passwordPrompt, 10)
+    do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
     mychild.sendline(mypassword)
     return mychild
 
@@ -105,7 +106,7 @@ for opt, arg in opts:
     elif opt == '-l':
         logfile = arg
     elif opt == '-t':
-        timeout = arg
+        timeout = int(arg)
     elif opt == '-d':
         dumpio = 1
     else:
@@ -156,6 +157,10 @@ db.close()
 authsection = 'Auth' + str(authid)
 username = config.get(authsection, 'username')
 password = config.get(authsection, 'password')
+try:
+    enable_password = config.get(authsection, 'enable_password')
+except ConfigParser.NoOptionError:
+    enable_password = password
 
 if proxy != 0:
     proxysection = 'Proxy' + str(proxy)
@@ -193,8 +198,8 @@ elif dtype == 'A':
     child.sendline('term len 0')
 elif dtype == 'F':
     child.sendline('enable')
-    do_expect(child, passwordPrompt, 10)
-    child.sendline(password)
+    do_expect(child, passwordPrompt, LOGINTIMEOUT)
+    child.sendline(enable_password)
     child.sendline('term pager 0')
 else:
     print 'ERROR: Invalid device type - %s' %(host)
