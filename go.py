@@ -152,7 +152,7 @@ else:
         HostDict['proxy'] = proxy
         HostDict['authid'] = authid
         HostList.append(HostDict.copy())
-        print "%s %s %s" %(str(idx).rjust(4), host.ljust(24), ip)
+        print "%s %s %s" %(str(idx).rjust(4), host.ljust(28), ip)
         idx += 1
     inidx = raw_input('Enter selection (default is 1): ')
     isvalid = False
@@ -177,8 +177,16 @@ else:
 db.close()
 
 authsection = 'Auth' + str(authid)
-username = config.get(authsection, 'username')
-password = config.get(authsection, 'password')
+
+try:
+    include_auth = config.get(authsection, 'include_auth')
+except ConfigParser.NoOptionError:
+    username = config.get(authsection, 'username')
+    password = config.get(authsection, 'password')
+else:
+    username = config.get(include_auth, 'username')
+    password = config.get(include_auth, 'password')
+
 try:
     enable_password = config.get(authsection, 'enable_password')
 except ConfigParser.NoOptionError:

@@ -155,8 +155,16 @@ else:
 db.close()
 
 authsection = 'Auth' + str(authid)
-username = config.get(authsection, 'username')
-password = config.get(authsection, 'password')
+
+try:
+    include_auth = config.get(authsection, 'include_auth')
+except ConfigParser.NoOptionError:
+    username = config.get(authsection, 'username')
+    password = config.get(authsection, 'password')
+else:
+    username = config.get(include_auth, 'username')
+    password = config.get(include_auth, 'password')
+
 try:
     enable_password = config.get(authsection, 'enable_password')
 except ConfigParser.NoOptionError:
