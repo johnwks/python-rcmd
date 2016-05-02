@@ -10,6 +10,7 @@ import ConfigParser
 import sqlite3
 import pexpect
 import os
+import time
 
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
@@ -46,6 +47,7 @@ def do_spawn_ssh(myip, myusername, mypassword, mysshconfig=''):
     if dumpio == 1:
         mychild.logfile_read = sys.stdout
     do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
+    time.sleep(1)
     mychild.sendline(mypassword)
     return mychild
 
@@ -74,6 +76,7 @@ def do_spawn_telnet(myip, myusername, mypassword, mypserver='', mypport=''):
         sys.exit(1)
     mychild.sendline(myusername)
     do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
+    time.sleep(1)
     mychild.sendline(mypassword)
     return mychild
 
