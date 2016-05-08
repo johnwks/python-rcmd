@@ -119,6 +119,9 @@ if len(args) != 1:
     usage()
 
 host = args[0]
+if re.match('[#!]', host):
+    print 'Skipping - %s' %(host)
+    sys.exit(1)
 
 try:
     cmdf = open(cmdfile, 'r')
