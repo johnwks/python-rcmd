@@ -9,6 +9,7 @@ import ConfigParser
 import sqlite3
 import pexpect
 import os
+import time
 
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
@@ -39,6 +40,7 @@ def do_spawn_ssh(myip, myusername, mypassword, mysshconfig=''):
         mychild = pexpect.spawn(SSH, ['-l', myusername, myip])
     mychild.maxread = MAXREAD
     do_expect(mychild, passwordPrompt, 10)
+    time.sleep(1)
     mychild.sendline(mypassword)
     return mychild
 
@@ -65,6 +67,7 @@ def do_spawn_telnet(myip, myusername, mypassword, mypserver='', mypport=''):
         sys.exit(1)
     mychild.sendline(myusername)
     do_expect(mychild, passwordPrompt, 10)
+    time.sleep(1)
     mychild.sendline(mypassword)
     return mychild
 
