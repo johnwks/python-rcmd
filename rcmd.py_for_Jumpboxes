@@ -10,6 +10,7 @@ import ConfigParser
 import sqlite3
 import pexpect
 import os
+import time
 
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
@@ -42,6 +43,7 @@ def do_spawn_ssh(myip, myusername, mypassword):
     if dumpio == 1:
         mychild.logfile_read = sys.stdout
     do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
+    time.sleep(1)
     mychild.sendline(mypassword)
     return mychild
 
@@ -64,6 +66,7 @@ def do_spawn_telnet(myip, myusername, mypassword):
         sys.exit(1)
     mychild.sendline(myusername)
     do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
+    time.sleep(1)
     mychild.sendline(mypassword)
     return mychild
 
@@ -106,6 +109,9 @@ if len(args) != 1:
     usage()
 
 host = args[0]
+if re.match('[#!]', host):
+    print 'Skipping - %s' %(host)
+    sys.exit(1)
 
 try:
     cmdf = open(cmdfile, 'r')
