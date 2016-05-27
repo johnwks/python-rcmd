@@ -10,6 +10,8 @@ import sqlite3
 import pexpect
 import os
 import time
+import readline
+import threading
 
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
@@ -85,6 +87,17 @@ def do_expect(mychild, myexpect, mytimeout):
         print 'ERROR: Unknown expect error - %s' %(host)
         sys.exit(1)
     return True
+
+class keepAliveThread (threading.Thread):
+    def __init__(self, mychild):
+        threading.Thread.__init__(self)
+        self.child = mychild
+    def run(self):
+        while True:
+            if exitFlag:
+                return True
+            time.sleep(10)
+            self.child.sendline('')
 
 
 try:
@@ -244,6 +257,24 @@ if logfile != '':
         sys.exit(1)
     child.logfile_read = fout
 
-child.interact()
+while True:
+    child.interact()
+    time.sleep(0.5)
+    if child.isalive() == True:
+        print "\nEntering CLI (\"quit\" to quit CLI)"
+        while True:
+            line = raw_input('CLI >> ')
+            if line == 'quit':
+                break
+            if line == 'a':
+                exitFlag = 0
+                keepalive = keepAliveThread(child)
+                keepalive.start()
+            if line == 'b':
+                exitFlag = 1
+    else:
+        break
+    print "Exiting CLI"
+    child.sendline('')
 
 print '!!! Completed %s (%s) !!!' %(host, ip)
