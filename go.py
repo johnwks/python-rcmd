@@ -277,4 +277,5 @@ while True:
     print "Exiting CLI"
     child.sendline('')
 
-print '!!! Completed %s (%s) !!!' %(host, ip)
+exitFlag = 1
+sys.exit(0)
