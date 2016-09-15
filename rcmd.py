@@ -3,14 +3,15 @@
 # pylint: disable=missing-docstring, locally-disabled, invalid-name, line-too-long, anomalous-backslash-in-string
 
 
+import os
+import time
 import sys
 import re
 import getopt
 import ConfigParser
 import sqlite3
 import pexpect
-import os
-import time
+
 
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
@@ -33,6 +34,13 @@ def usage():
 
         Options:
         -d              Dump all in/output from beginning
+        -h <host,...>   Define a custom host entry to use. The format is hostname,IP,type,method,proxy,auth
+                            hostname - hostname of custom host
+                            IP - management IP to connect to custom host
+                            type - device type. C=Cisco, F=Cisco Firewall, J=Juniper, A=Arista
+                            method - connection method. S=SSH, T=telnet
+                            proxy - proxy ID to use
+                            auth - auth ID to use
         -l logfile      Define a logfile to send output to
         -t timeout      Define timeout for commands (default 45 seconds)
 '''
@@ -97,9 +105,12 @@ def do_expect(mychild, myexpect, mytimeout):
 
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'c:i:l:t:d')
+    opts, args = getopt.getopt(sys.argv[1:], 'c:i:l:t:h:d')
 except getopt.GetoptError:
     usage()
+
+host = None
+customhost = 0
 
 for opt, arg in opts:
     if opt == '-c':
@@ -110,15 +121,25 @@ for opt, arg in opts:
         logfile = arg
     elif opt == '-t':
         timeout = int(arg)
+    elif opt == '-h':
+        customhost = 1
+        row = arg.split(',')
+        host = row[0]
+        ip = row[1]
+        dtype = row[2]
+        conn = row[3]
+        proxy = int(row[4])
+        authid = int(row[5])
     elif opt == '-d':
         dumpio = 1
     else:
         usage()
 
-if len(args) != 1:
-    usage()
+if host is None:
+    if len(args) != 1:
+        usage()
+    host = args[0]
 
-host = args[0]
 if re.match('[#!]', host):
     print 'Skipping - %s' %(host)
     sys.exit(1)
@@ -140,25 +161,26 @@ config = ConfigParser.ConfigParser()
 config.read(cfgfile)
 
 SQLDB = config.get('DevicesDB', 'path')
-if SQLDB == None:
+if SQLDB is None:
     print 'ERROR: Unable to get DB file from CFG file - %s' %(host)
     sys.exit(1)
 
-db = sqlite3.connect(SQLDB)
-cursor = db.cursor()
-cursor.execute('''SELECT * FROM Devices WHERE Hostname = ? COLLATE NOCASE LIMIT 1''', (host,))
-row = cursor.fetchone()
-if row == None:
-    print 'ERROR: Device does not exist in DB - %s' %(host)
-    sys.exit(1)
-else:
-    host = row[0]
-    ip = row[1]
-    dtype = row[2]
-    conn = row[3]
-    proxy = row[4]
-    authid = row[5]
-db.close()
+if customhost == 0:
+    db = sqlite3.connect(SQLDB)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM Devices WHERE Hostname = ? COLLATE NOCASE LIMIT 1''', (host,))
+    row = cursor.fetchone()
+    if row is None:
+        print 'ERROR: Device does not exist in DB - %s' %(host)
+        sys.exit(1)
+    else:
+        host = row[0]
+        ip = row[1]
+        dtype = row[2]
+        conn = row[3]
+        proxy = int(row[4])
+        authid = int(row[5])
+    db.close()
 
 authsection = 'Auth' + str(authid)
 
