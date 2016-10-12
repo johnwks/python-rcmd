@@ -227,6 +227,8 @@ if dtype == 'C':
 elif dtype == 'J':
     child.sendline('set cli screen-length 0')
     do_expect(child, prompt, timeout)
+    child.sendline('set cli screen-width 1024')
+    do_expect(child, prompt, timeout)
     child.send(chr(0x1b))
     child.send('q')
     child.sendline('')
