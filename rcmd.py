@@ -222,7 +222,7 @@ else:
 
 do_expect(child, prompt, timeout)
 
-if dtype == 'C':
+if (dtype == 'C') or (dtype == 'N'):
     child.sendline('term len 0')
 elif dtype == 'J':
     child.sendline('set cli screen-length 0')
