@@ -222,8 +222,14 @@ else:
 
 do_expect(child, prompt, timeout)
 
-if (dtype == 'C') or (dtype == 'N'):
-    child.sendline('term len 0')
+if dtype == 'C':
+    child.sendline('terminal length 0')
+    do_expect(child, prompt, timeout)
+    child.sendline('terminal width 511')
+elif dtype == 'N':
+    child.sendline('terminal length 0')
+    do_expect(child, prompt, timeout)
+    child.sendline('terminal width 511')
 elif dtype == 'J':
     child.sendline('set cli screen-length 0')
     do_expect(child, prompt, timeout)
@@ -233,7 +239,13 @@ elif dtype == 'J':
     child.send('q')
     child.sendline('')
 elif dtype == 'A':
-    child.sendline('term len 0')
+    child.sendline('terminal length 0')
+    do_expect(child, prompt, timeout)
+    child.sendline('terminal width 511')
+elif dtype == 'E':
+    child.sendline('terminal length 0')
+    do_expect(child, prompt, timeout)
+    child.sendline('terminal width 511')
 elif dtype == 'F':
     child.sendline('enable')
     do_expect(child, passwordPrompt, LOGINTIMEOUT)
