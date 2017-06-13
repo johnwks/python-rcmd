@@ -18,8 +18,8 @@ def usage():
     print '''
         -c cmdfile      Commands file
         -i cfgfile      Config file
-        -t device-type  Device type - C Cisco, J Juniper, A Arista, F Cisco ASA, N Cisco NXOS
-        -m conn-method  Connection method - S SSH, T telnet
+        -t device-type  Device type. J - Juniper JunOS (default), C - Cisco IOS, A - Arista EOS, F - Cisco ASA, N - Cisco NXOS
+        -m conn-method  Connection method. S - SSH (default), T - telnet
         host            Hostname of device to connect to
 
         Options:
@@ -75,8 +75,8 @@ def main():
     debug = False
     host = None
     DELAY_FACTOR = 2
-    dtype = None
-    conn = None
+    dtype = 'J'
+    conn = 'S'
 
     signal.signal(signal.SIGINT, sigint_handler)
 
