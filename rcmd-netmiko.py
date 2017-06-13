@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/bin/env python
 
-# pylint: disable=missing-docstring, locally-disabled, invalid-name, line-too-long, anomalous-backslash-in-string
+# pylint: disable=missing-docstring, locally-disabled, invalid-name, line-too-long, anomalous-backslash-in-string, too-many-arguments, too-many-locals, too-many-branches, too-many-statements
 
 
 import sys
@@ -36,7 +36,7 @@ def usage():
 
 
 def sigint_handler(signum, frame):
-    print 'Quitting script'
+    print '\nQuitting script - %s %s' %(signum, frame)
     sys.exit(1)
 
 
@@ -61,7 +61,7 @@ def do_spawn_ssh(mydtype, myhost, myip, myusername, mypassword, myenablepass, my
     return net_connect
 
 
-def do_spawn_telnet(mydtype, myhost, myip, myusername, mypassword, myenablepass):
+def do_spawn_telnet(myhost, myip, myusername, mypassword, myenablepass):
     device = {
         'device_type': 'cisco_ios_telnet',
         'ip': myip,
@@ -194,14 +194,23 @@ def main():
         devtype = 'cisco_asa'
     elif dtype == 'N':
         devtype = 'cisco_nxos'
+    else:
+        print 'ERROR: Invalid device type - %s' %(host)
+        sys.exit(1)
 
     if conn == 'S':
         child = do_spawn_ssh(devtype, host, ip, username, password, enable_password, sshconfig)
     elif conn == 'T':
-        child = do_spawn_telnet(devtype, host, ip, username, password, enable_password)
+        child = do_spawn_telnet(host, ip, username, password, enable_password)
     else:
         print 'ERROR: Invalid connection type - %s' %(host)
         sys.exit(1)
+
+    if child.check_enable_mode() is False:
+        child.enable()
+        if child.check_enable_mode() is False:
+            print 'ERROR: Unable to enter Enable mode - %s' %(host)
+            sys.exit(1)
 
     if logfile != None:
         try:
@@ -227,7 +236,7 @@ def main():
     if logfile != None:
         fout.write(trailer + '\n')
         fout.close()
-    print trailer    
+    print trailer
 
 
 if __name__ == "__main__":
