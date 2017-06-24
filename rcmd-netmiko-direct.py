@@ -176,7 +176,7 @@ def main():
             output = child.send_command(line, delay_factor=DELAY_FACTOR)
             if logfile != None:
                 fout.write(header + '\n')
-                fout.write(output + '\n')
+                fout.write(output.encode('utf8') + '\n')
             if debug:
                 print header
                 print output
