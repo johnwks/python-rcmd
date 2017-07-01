@@ -19,6 +19,12 @@ MAXREAD = 4000 * 1024
 LOGINTIMEOUT = 30
 
 
+class RcmdError(Exception):
+
+    def __init__(self, value):
+        self.value = value
+
+
 class Device(object):
 
     def __init__(self, cfgfile=None, host=None, hostregex=None, customhost=None):
@@ -50,18 +56,15 @@ class Device(object):
         HostDict = {}
 
         if (self.host is None) and (self.hostregex is None) and (customhost is None):
-            print 'ERROR: No host or hostregex or customhost specified'
-            return None
+            raise RcmdError('ERROR: No host or hostregex or customhost specified')
 
         if self.cfgfile is None:
-            print 'ERROR: No cfgfile specified'
-            return None
+            raise RcmdError('ERROR: No cfgfile specified')
 
         try:
             cfgf = open(self.cfgfile, 'r')
         except IOError:
-            print 'ERROR: Unable to open cfgfile - %s' %(self.cfgfile)
-            return None
+            raise RcmdError('ERROR: Unable to open cfgfile')
         cfgf.close()
 
         config = ConfigParser.ConfigParser()
@@ -78,8 +81,7 @@ class Device(object):
         else:
             SQLDB = config.get('DevicesDB', 'path')
             if SQLDB is None:
-                print 'ERROR: Unable to get DB file from CFG file - %s' %(self.cfgfile)
-                return None
+                raise RcmdError('ERROR: Unable to get DB file from CFG file')
 
             if host is not None:
                 db = sqlite3.connect(SQLDB)
@@ -87,8 +89,7 @@ class Device(object):
                 cursor.execute('''SELECT * FROM Devices WHERE Hostname = ? COLLATE NOCASE LIMIT 1''', (host,))
                 row = cursor.fetchone()
                 if row is None:
-                    print 'ERROR: Device does not exist in DB - %s' %(host)
-                    return None
+                    raise RcmdError('ERROR: Device does not exist in DB')
                 else:
                     self.host = row[0]
                     self.ip = row[1]
@@ -107,8 +108,7 @@ class Device(object):
                 cursor.execute(sqlquery)
                 rows = cursor.fetchall()
                 if not rows:
-                    print 'ERROR: Device does not exist in DB - %s' %(self.hostregex)
-                    return None
+                    raise RcmdError('ERROR: Device does not exist in DB')
                 elif len(rows) == 1:
                     self.host = rows[0][0]
                     self.ip = rows[0][1]
@@ -144,19 +144,16 @@ class Device(object):
                     inidx = raw_input('Enter selection (default is 1, q to quit): ')
                     isvalid = False
                     if inidx == 'q':
-                        print 'Exiting'
-                        return None
+                        raise RcmdError('Quitting')
                     else:
                         if inidx == '':
                             inidx = '1'
                         try:
                             inidx = int(inidx)
                         except ValueError:
-                            print 'Invalid entry'
-                            return None
+                            raise RcmdError('ERROR: Invalid selection')
                         if (inidx >= idx) or (inidx < 1):
-                            print 'Invalid entry - no such index'
-                            return None
+                            raise RcmdError('ERROR: Invalid selection')
                         for j in HostList:
                             if int(j['index']) == int(inidx):
                                 isvalid = True
@@ -167,7 +164,7 @@ class Device(object):
                                 self.proxy = j['proxy']
                                 self.authid = j['authid']
                         if isvalid is False:
-                            return None
+                            raise RcmdError('ERROR: Invalid selection')
 
             db.close()
 
@@ -198,23 +195,6 @@ class Device(object):
         return None
 
 
-    def printvars(self):
-        '''
-        For debugging purpose only.
-        '''
-        print 'cfgfile == ', self.cfgfile
-        print 'host ==', self.host
-        print 'hostregex ==', self.hostregex
-        print 'ip ==', self.ip
-        print 'dtype ==', self.dtype
-        print 'conn ==', self.conn
-        print 'proxy ==', self.proxy
-        print 'authid ==', self.authid
-        print 'username ==', self.username
-        print 'password ==', self.password
-        print 'enable_password ==', self.enable_password
-
-
     def connect(self, debug=False, timeout=45):
         self.debug = debug
         self.timeout = timeout
@@ -224,10 +204,9 @@ class Device(object):
         elif self.conn == 'T':
             self.child = self.do_spawn_telnet()
         else:
-            print 'ERROR: Invalid connection type - %s' %(self.host)
-            return False
+            raise RcmdError('ERROR: Invalid connection type')
         if self.child is None:
-            return False
+            raise RcmdError('ERROR: Unable to connect')
 
         if self.dtype == 'C':
             self.do_sendline('terminal length 0')
@@ -253,8 +232,7 @@ class Device(object):
             self.child.sendline(self.enable_password)
             self.do_sendline('term pager 0')
         else:
-            print 'ERROR: Invalid device type - %s' %(self.host)
-            return False
+            raise RcmdError('ERROR: Invalid device type')
 
         self.connected = True
 
@@ -269,12 +247,10 @@ class Device(object):
         mychild.maxread = MAXREAD
         if self.debug:
             mychild.logfile_read = sys.stdout
-        if not self.do_expect(mychild, passwordPrompt, LOGINTIMEOUT):
-            return None
+        self.do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
         time.sleep(1)
         mychild.sendline(self.password)
-        if not self.do_expect(mychild, prompt, LOGINTIMEOUT):
-            return None
+        self.do_expect(mychild, prompt, LOGINTIMEOUT)
         return mychild
 
 
@@ -293,21 +269,16 @@ class Device(object):
         if myexp == 0 or myexp == 1:
             pass
         elif myexp == 2:
-            print 'ERROR: EOF encountered - %s' %(self.host)
-            return None
+            raise RcmdError('ERROR: EOF encountered')
         elif myexp == 3:
-            print 'ERROR: Timeout encountered - %s' %(self.host)
-            return None
+            raise RcmdError('ERROR: Timeout encountered')
         else:
-            print 'ERROR: Unknown expect error - %s' %(self.host)
-            return None
+            raise RcmdError('ERROR: Unknown expect error')
         mychild.sendline(self.username)
-        if not self.do_expect(mychild, passwordPrompt, LOGINTIMEOUT):
-            return None
+        self.do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
         time.sleep(1)
         mychild.sendline(self.password)
-        if not self.do_expect(mychild, prompt, LOGINTIMEOUT):
-            return None
+        self.do_expect(mychild, prompt, LOGINTIMEOUT)
         return mychild
 
 
@@ -316,22 +287,18 @@ class Device(object):
         if myexp == 0:
             pass
         elif myexp == 1:
-            print 'ERROR: EOF encountered - %s' %(self.host)
-            return False
+            raise RcmdError('ERROR: EOF encountered')
         elif myexp == 2:
-            print 'ERROR: Timeout encountered - %s' %(self.host)
-            return False
+            raise RcmdError('ERROR: Timeout encountered')
         else:
-            print 'ERROR: Unknown expect error - %s' %(self.host)
-            return False
+            raise RcmdError('ERROR: Unknown expect error')
         self.buffer = mychild.before
         return True
 
 
     def do_sendline(self, line):
         self.child.sendline(line)
-        if not self.do_expect(self.child, prompt, self.timeout):
-            return False
+        self.do_expect(self.child, prompt, self.timeout)
         return True
 
 

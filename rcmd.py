@@ -7,7 +7,7 @@ import os
 import sys
 import re
 import getopt
-from rcmdclass import Device
+from rcmdclass import Device, RcmdError
 
 
 def usage():
@@ -86,13 +86,13 @@ def main():
             print 'ERROR: Error opening logfile - %s' %(host)
             sys.exit(1)
 
-    if customhost is not None:
-        dev = Device(cfgfile=cfgfile, customhost=customhost)
-    else:
-        dev = Device(cfgfile=cfgfile, host=host)
-
-    if not dev.valid:
-        print 'ERROR: Invalid device'
+    try:
+        if customhost is not None:
+            dev = Device(cfgfile=cfgfile, customhost=customhost)
+        else:
+            dev = Device(cfgfile=cfgfile, host=host)
+    except RcmdError as e:
+        print e.value
         sys.exit(1)
 
     if dev.conn == 'S':
@@ -106,24 +106,31 @@ def main():
 
     os.environ['TERM'] = 'vt100'
 
-    if not dev.connect(debug, timeout):
-#        print 'ERROR: Unable to connect to host - %s' %(dev.host)
+    try:
+        dev.connect(debug, timeout)
+    except RcmdError as e:
+        print e.value, '-', dev.host
         sys.exit(1)
 
-    dev.do_sendline('')
+    try:
+        dev.do_sendline('')
+    except RcmdError as e:
+        print e.value, '-', dev.host
+        sys.exit(1)
 
     for cmd in cmdf:
         line = cmd.rstrip()
         if re.search('^[^#!]', line):
-            if not dev.do_sendline(line):
-                print 'ERROR: Unable to send line to host - %s' %(dev.host)
+            try:
+                dev.do_sendline(line)
+            except RcmdError as e:
+                print e.value, '-', dev.host
                 sys.exit(1)
-            else:
-                header = '\n### %s ###\n' %(line)
-                output = dev.do_getbuffer()
-                if logfile is not None:
-                    fout.write(header + '\n')
-                    fout.write(output + '\n')
+            header = '\n### %s ###\n' %(line)
+            output = dev.do_getbuffer()
+            if logfile is not None:
+                fout.write(header + '\n')
+                fout.write(output + '\n')
 
     trailer = '\n!!! Completed %s (%s) !!!' %(dev.host, dev.ip)
     if logfile is not None:
