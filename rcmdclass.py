@@ -4,6 +4,7 @@
 
 import sys
 import time
+import re
 import ConfigParser
 import sqlite3
 import pexpect
@@ -228,8 +229,6 @@ class Device(object):
         if self.child is None:
             return False
 
-        self.do_expect(self.child, prompt, self.timeout)
-
         if self.dtype == 'C':
             self.do_sendline('terminal length 0')
             self.do_sendline('terminal width 511')
@@ -274,6 +273,8 @@ class Device(object):
             return None
         time.sleep(1)
         mychild.sendline(self.password)
+        if not self.do_expect(mychild, prompt, LOGINTIMEOUT):
+            return None
         return mychild
 
 
@@ -305,6 +306,8 @@ class Device(object):
             return None
         time.sleep(1)
         mychild.sendline(self.password)
+        if not self.do_expect(mychild, prompt, LOGINTIMEOUT):
+            return None
         return mychild
 
 
@@ -334,7 +337,8 @@ class Device(object):
 
     def do_getbuffer(self):
         idx = self.buffer.find('\n')
-        return self.buffer[idx+1:]
+        outp = re.sub('\r\n', '\n', self.buffer[idx+1:])
+        return outp
 
 
     def disconnect(self):

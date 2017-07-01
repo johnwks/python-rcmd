@@ -37,6 +37,9 @@ def main():
     timeout = 45
     debug = False
 
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'c:i:l:t:h:d')
     except getopt.GetoptError:
@@ -104,7 +107,7 @@ def main():
     os.environ['TERM'] = 'vt100'
 
     if not dev.connect(debug, timeout):
-        print 'ERROR: Unable to connect to host - %s' %(dev.host)
+#        print 'ERROR: Unable to connect to host - %s' %(dev.host)
         sys.exit(1)
 
     dev.do_sendline('')
@@ -120,7 +123,7 @@ def main():
                 output = dev.do_getbuffer()
                 if logfile is not None:
                     fout.write(header + '\n')
-                    fout.write(output.encode('utf8') + '\n')
+                    fout.write(output + '\n')
 
     trailer = '\n!!! Completed %s (%s) !!!' %(dev.host, dev.ip)
     if logfile is not None:
