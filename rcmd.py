@@ -102,7 +102,7 @@ def main():
     else:
         method = 'Unknown'
 
-    print '!!! Connecting to %s (%s) via %s !!!' %(dev.host, dev.ip, method)
+    print '!!! Connecting to %s (%s) using %s !!!' %(dev.host, dev.ip, method)
 
     os.environ['TERM'] = 'vt100'
 
@@ -131,6 +131,7 @@ def main():
             if logfile is not None:
                 fout.write(header + '\n')
                 fout.write(output + '\n')
+                fout.flush()
 
     trailer = '\n!!! Completed %s (%s) !!!' %(dev.host, dev.ip)
     if logfile is not None:
