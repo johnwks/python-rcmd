@@ -79,13 +79,6 @@ def main():
         print 'ERROR: Unable to open cmdfile - %s' %(host)
         sys.exit(1)
 
-    if logfile is not None:
-        try:
-            fout = open(logfile, 'wb')
-        except IOError:
-            print 'ERROR: Error opening logfile - %s' %(host)
-            sys.exit(1)
-
     try:
         if customhost is not None:
             dev = Device(cfgfile=cfgfile, customhost=customhost)
@@ -118,6 +111,13 @@ def main():
         print e.value, '-', dev.host
         sys.exit(1)
 
+    if logfile is not None:
+        try:
+            fout = open(logfile, 'wb')
+        except IOError:
+            print 'ERROR: Error opening logfile - %s' %(host)
+            sys.exit(1)
+
     for cmd in cmdf:
         line = cmd.rstrip()
         if re.search('^[^#!]', line):
@@ -133,7 +133,7 @@ def main():
                 fout.write(output + '\n')
                 fout.flush()
 
-    trailer = '\n!!! Completed %s (%s) !!!' %(dev.host, dev.ip)
+    trailer = '\n!!! Completed     %s (%s) !!!' %(dev.host, dev.ip)
     if logfile is not None:
         fout.write(trailer + '\n')
         fout.close()
@@ -142,5 +142,5 @@ def main():
     dev.disconnect()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
