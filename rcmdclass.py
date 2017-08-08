@@ -229,8 +229,8 @@ class Device(object):
         elif self.dtype == 'F':
             self.child.sendline('enable')
             self.do_expect(self.child, passwordPrompt, LOGINTIMEOUT)
-            self.child.sendline(self.enable_password)
-            self.do_sendline('term pager 0')
+            self.do_sendline(self.enable_password)
+            self.do_sendline('terminal pager 0')
         else:
             raise RcmdError('ERROR: Invalid device type')
 
