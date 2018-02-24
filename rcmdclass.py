@@ -236,6 +236,8 @@ class Device(object):
         else:
             raise RcmdError('ERROR: Invalid device type')
 
+        self.do_set_prompt()
+
         self.connected = True
 
         return True
@@ -253,7 +255,6 @@ class Device(object):
         time.sleep(1)
         mychild.sendline(self.password)
         self.do_expect(mychild, self.prompt, LOGINTIMEOUT)
-        self.do_set_prompt(mychild)
         return mychild
 
 
@@ -282,14 +283,13 @@ class Device(object):
         time.sleep(1)
         mychild.sendline(self.password)
         self.do_expect(mychild, self.prompt, LOGINTIMEOUT)
-        self.do_set_prompt(mychild)
         return mychild
 
 
-    def do_set_prompt(self, mychild):
-        mychild.sendline('')
-        self.do_expect(mychild, self.prompt, self.timeout)
-        self.prompt = mychild.match.group(0)
+    def do_set_prompt(self):
+        self.child.sendline('')
+        self.do_expect(self.child, self.prompt, self.timeout)
+        self.prompt = self.child.match.group(0)
         return True
 
 
