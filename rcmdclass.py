@@ -13,7 +13,8 @@ import pexpect
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
 SOCAT = '/usr/bin/socat'
-prompt = '[\r\n]([\w\d\-\@\/\.\(\)]+[#>]|[#>%] )'
+#prompt = '[\r\n]([\w\d\-\@\/\.\(\)]+[#>]|[#>%] )'
+prompt = '[\r\n][\w\d\-\@\/\.\(\)]+[#>]'
 passwordPrompt = '[Pp]assword:'
 MAXREAD = 4000 * 1024
 LOGINTIMEOUT = 30

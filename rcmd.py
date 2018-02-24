@@ -81,11 +81,12 @@ def main():
 
     try:
         if customhost is not None:
+            host = customhost
             dev = Device(cfgfile=cfgfile, customhost=customhost)
         else:
             dev = Device(cfgfile=cfgfile, host=host)
     except RcmdError as e:
-        print e.value
+        print e.value, '-', host
         sys.exit(1)
 
     if dev.conn == 'S':
