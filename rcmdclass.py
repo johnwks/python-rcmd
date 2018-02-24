@@ -14,8 +14,8 @@ SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
 SOCAT = '/usr/bin/socat'
 #prompt = '[\r\n]([\w\d\-\@\/\.\(\)]+[#>]|[#>%] )'
-prompt = '[\r\n][\w\d\-\@\/\.\(\)]+[#>]'
-passwordPrompt = '[Pp]assword:'
+BASE_PROMPT = '[\r\n][\w\d\-\@\/\.\(\)]+[#>]'
+PASSWORD_PROMPT = '[Pp]assword:'
 MAXREAD = 4000 * 1024
 LOGINTIMEOUT = 30
 
@@ -53,6 +53,7 @@ class Device(object):
         self.child = None
         self.timeout = 45
         self.buffer = None
+        self.prompt = BASE_PROMPT
         HostList = []
         HostDict = {}
 
@@ -229,7 +230,7 @@ class Device(object):
             self.do_sendline('terminal width 511')
         elif self.dtype == 'F':
             self.child.sendline('enable')
-            self.do_expect(self.child, passwordPrompt, LOGINTIMEOUT)
+            self.do_expect(self.child, PASSWORD_PROMPT, LOGINTIMEOUT)
             self.do_sendline(self.enable_password)
             self.do_sendline('terminal pager 0')
         else:
@@ -248,10 +249,11 @@ class Device(object):
         mychild.maxread = MAXREAD
         if self.debug:
             mychild.logfile_read = sys.stdout
-        self.do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
+        self.do_expect(mychild, PASSWORD_PROMPT, LOGINTIMEOUT)
         time.sleep(1)
         mychild.sendline(self.password)
-        self.do_expect(mychild, prompt, LOGINTIMEOUT)
+        self.do_expect(mychild, self.prompt, LOGINTIMEOUT)
+        self.do_set_prompt(mychild)
         return mychild
 
 
@@ -276,11 +278,19 @@ class Device(object):
         else:
             raise RcmdError('ERROR: Unknown expect error')
         mychild.sendline(self.username)
-        self.do_expect(mychild, passwordPrompt, LOGINTIMEOUT)
+        self.do_expect(mychild, PASSWORD_PROMPT, LOGINTIMEOUT)
         time.sleep(1)
         mychild.sendline(self.password)
-        self.do_expect(mychild, prompt, LOGINTIMEOUT)
+        self.do_expect(mychild, self.prompt, LOGINTIMEOUT)
+        self.do_set_prompt(mychild)
         return mychild
+
+
+    def do_set_prompt(self, mychild):
+        mychild.sendline('')
+        self.do_expect(mychild, self.prompt, self.timeout)
+        self.prompt = mychild.match.group(0)
+        return True
 
 
     def do_expect(self, mychild, myexpect, mytimeout):
@@ -299,7 +309,7 @@ class Device(object):
 
     def do_sendline(self, line):
         self.child.sendline(line)
-        self.do_expect(self.child, prompt, self.timeout)
+        self.do_expect(self.child, self.prompt, self.timeout)
         return True
 
 
