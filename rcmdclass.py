@@ -13,8 +13,8 @@ import pexpect
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
 SOCAT = '/usr/bin/socat'
-#prompt = '[\r\n]([\w\d\-\@\/\.\(\)]+[#>]|[#>%] )'
-BASE_PROMPT = '[\r\n][\w\d\-\@\/\.\(\)]+[#>]'
+BASE_PROMPT = '[\r\n][\w\d\-\@\/\.\(\)]+[#>%]'
+HOST_PROMPT = '(.*)[#>%]'
 PASSWORD_PROMPT = '[Pp]assword:'
 MAXREAD = 4000 * 1024
 LOGINTIMEOUT = 30
@@ -290,6 +290,9 @@ class Device(object):
         self.child.sendline('')
         self.do_expect(self.child, self.prompt, self.timeout)
         self.prompt = self.child.match.group(0)
+        m = re.search(HOST_PROMPT, self.prompt)
+        if m.group(1) is not None:
+            self.prompt = '\r\n%s%s' %(m.group(1), HOST_PROMPT)
         return True
 
 
@@ -310,6 +313,14 @@ class Device(object):
     def do_sendline(self, line):
         self.child.sendline(line)
         self.do_expect(self.child, self.prompt, self.timeout)
+        return True
+
+
+    def do_sendline_setprompt(self, line):
+        self.child.sendline(line)
+        self.prompt = BASE_PROMPT
+        self.do_expect(self.child, self.prompt, self.timeout)
+        self.do_set_prompt()
         return True
 
 

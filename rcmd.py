@@ -36,6 +36,7 @@ def main():
     logfile = None
     timeout = 45
     debug = False
+    chgprompt = False
 
     reload(sys)
     sys.setdefaultencoding('utf-8')
@@ -121,18 +122,27 @@ def main():
 
     for cmd in cmdf:
         line = cmd.rstrip()
+        # Ignore lines starting with # or ! as comments
         if re.search('^[^#!]', line):
-            try:
-                dev.do_sendline(line)
-            except RcmdError as e:
-                print e.value, '-', dev.host
-                sys.exit(1)
-            header = '\n### %s ###\n' %(line)
-            output = dev.do_getbuffer()
-            if logfile is not None:
-                fout.write(header + '\n')
-                fout.write(output + '\n')
-                fout.flush()
+            # Asterisk (*) at the beginning of the line means the next command will change the prompt
+            if re.search('^[*]', line):
+                chgprompt = True
+            else:
+                try:
+                    if chgprompt is True:
+                        dev.do_sendline_setprompt(line)
+                        chgprompt = False
+                    else:
+                        dev.do_sendline(line)
+                except RcmdError as e:
+                    print e.value, '-', dev.host
+                    sys.exit(1)
+                header = '\n### %s ###\n' %(line)
+                output = dev.do_getbuffer()
+                if logfile is not None:
+                    fout.write(header + '\n')
+                    fout.write(output + '\n')
+                    fout.flush()
 
     trailer = '\n!!! Completed     %s (%s) !!!' %(dev.host, dev.ip)
     if logfile is not None:
