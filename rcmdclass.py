@@ -15,6 +15,7 @@ TELNET = '/usr/bin/telnet'
 SOCAT = '/usr/bin/socat'
 BASE_PROMPT = '[\r\n][\w\d\-\@\/\.\(\)]+[#>%]'
 HOST_PROMPT = '(.*)[#>%]'
+PROMPT_CHAR = '[#>%]'
 PASSWORD_PROMPT = '[Pp]assword:'
 MAXREAD = 4000 * 1024
 LOGINTIMEOUT = 30
@@ -292,7 +293,7 @@ class Device(object):
         self.prompt = self.child.match.group(0)
         m = re.search(HOST_PROMPT, self.prompt)
         if m.group(1) is not None:
-            self.prompt = '\r\n%s%s' %(m.group(1), HOST_PROMPT)
+            self.prompt = '\r\n%s%s' %(re.escape(m.group(1)), PROMPT_CHAR)
         return True
 
 
