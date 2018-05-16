@@ -13,7 +13,7 @@ import pexpect
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
 SOCAT = '/usr/bin/socat'
-BASE_PROMPT = '[\r\n][\w\d\-\@\/\.\(\)]+[#>%]'
+BASE_PROMPT = '[\r\n][\w\d\-\+\@\/\.\(\)]+[#>%]'
 HOST_PROMPT = '(.*)[#>%]'
 PROMPT_CHAR = '[#>%]'
 PASSWORD_PROMPT = '[Pp]assword:'
