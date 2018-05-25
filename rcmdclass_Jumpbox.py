@@ -11,6 +11,7 @@ import pexpect
 
 
 SSH = '/usr/bin/ssh'
+SSHCFG = '/usr/local/etc/rcmd-ssh-config'
 TELNET = '/usr/bin/telnet'
 SOCAT = '/usr/bin/socat'
 BASE_PROMPT = '[\r\n][\w\d\-\+\@\/\.\(\)]+[#>%]'
@@ -246,7 +247,7 @@ class Device(object):
 
     def do_spawn_ssh(self):
         if self.sshconfig is None:
-            mychild = pexpect.spawn(SSH, ['-l', self.username, self.ip])
+            mychild = pexpect.spawn(SSH, ['-F', SSHCFG, '-l', self.username, self.ip])
         else:
             mychild = pexpect.spawn(SSH, ['-F', self.sshconfig, '-l', self.username, self.ip])
         mychild.maxread = MAXREAD
