@@ -212,7 +212,6 @@ class Device(object):
         if self.child is None:
             raise RcmdError('ERROR: Unable to connect')
 
-<<<<<<< HEAD
         self.do_set_prompt()
         self.os_detect()
 
@@ -246,15 +245,6 @@ class Device(object):
             self.dtype = 'J'
             if self.debug:
                 print '\nDEBUG> Juniper JunOS device detected'
-=======
-        if self.dtype == 'C':
-            self.do_sendline('terminal length 0')
-            self.do_sendline('terminal width 0')
-        elif self.dtype == 'N':
-            self.do_sendline('terminal length 0')
-            self.do_sendline('terminal width 511')
-        elif self.dtype == 'J':
->>>>>>> 5277ec3467b922d493141c6e21fb3d1cca76c27c
             self.do_sendline('set cli screen-length 0')
             self.do_sendline('set cli screen-width 0')
             self.child.send(chr(0x1b))
@@ -277,16 +267,11 @@ class Device(object):
             if self.debug:
                 print '\nDEBUG> Cisco NX-OS device detected'
             self.do_sendline('terminal length 0')
-<<<<<<< HEAD
             self.do_sendline('terminal width 511')
         elif re.search('Cisco Application Control', output):
             self.dtype = 'E'
             if self.debug:
                 print '\nDEBUG> Cisco ACE device detected'
-=======
-            self.do_sendline('terminal width 32767')
-        elif self.dtype == 'E':
->>>>>>> 5277ec3467b922d493141c6e21fb3d1cca76c27c
             self.do_sendline('terminal length 0')
             self.do_sendline('terminal width 511')
         elif re.search('\n(Cisco Adaptive Security|FWSM)', output):
