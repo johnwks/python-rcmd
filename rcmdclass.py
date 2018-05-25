@@ -19,6 +19,7 @@ PROMPT_CHAR = '[#>%]'
 PASSWORD_PROMPT = '[Pp]assword:'
 MAXREAD = 4000 * 1024
 LOGINTIMEOUT = 30
+MORE_PROMPTS = '[Mm]ore(\)---|--| --->)'
 
 
 class RcmdError(Exception):
@@ -211,35 +212,78 @@ class Device(object):
         if self.child is None:
             raise RcmdError('ERROR: Unable to connect')
 
-        if self.dtype == 'C':
-            self.do_sendline('terminal length 0')
-            self.do_sendline('terminal width 511')
-        elif self.dtype == 'N':
-            self.do_sendline('terminal length 0')
-            self.do_sendline('terminal width 511')
-        elif self.dtype == 'J':
+        self.do_set_prompt()
+        self.os_detect()
+
+        self.connected = True
+
+        return True
+
+
+    def os_detect(self):
+        got_prompt = False
+        output = ''
+
+        self.child.sendline('show version')
+
+        while (got_prompt is False):
+            myexp = self.child.expect([self.prompt, MORE_PROMPTS, pexpect.EOF, pexpect.TIMEOUT], timeout=3)
+            if myexp == 0:
+                output = output + self.child.before
+                got_prompt = True
+            elif myexp == 1:
+                output = output + self.child.before
+                self.child.send(' ')
+            elif myexp == 2:
+                raise RcmdError('ERROR: EOF encountered')
+            elif myexp == 3:
+                raise RcmdError('ERROR: Timeout encountered')
+            else:
+                raise RcmdError('ERROR: Unknown expect error')
+
+        if re.search('\nJunos\:', output):
+            self.dtype = 'J'
+            if self.debug:
+                print '\nDEBUG> Juniper JunOS device detected'
             self.do_sendline('set cli screen-length 0')
-            self.do_sendline('set cli screen-width 1024')
+            self.do_sendline('set cli screen-width 0')
             self.child.send(chr(0x1b))
             self.child.send('q')
             self.do_sendline('')
-        elif self.dtype == 'A':
+        elif re.search('Arista', output):
+            self.dtype = 'A'
+            if self.debug:
+                print '\nDEBUG> Arista EOS device detected'
+            self.do_sendline('terminal length 0')
+            self.do_sendline('terminal width 32767')
+        elif re.search('Cisco IOS', output):
+            self.dtype = 'C'
+            if self.debug:
+                print '\nDEBUG> Cisco IOS device detected'
+            self.do_sendline('terminal length 0')
+            self.do_sendline('terminal width 0')
+        elif re.search('Cisco Nexus', output):
+            self.dtype = 'N'
+            if self.debug:
+                print '\nDEBUG> Cisco NX-OS device detected'
             self.do_sendline('terminal length 0')
             self.do_sendline('terminal width 511')
-        elif self.dtype == 'E':
+        elif re.search('Cisco Application Control', output):
+            self.dtype = 'E'
+            if self.debug:
+                print '\nDEBUG> Cisco ACE device detected'
             self.do_sendline('terminal length 0')
             self.do_sendline('terminal width 511')
-        elif self.dtype == 'F':
+        elif re.search('\n(Cisco Adaptive Security|FWSM)', output):
+            self.dtype = 'F'
+            if self.debug:
+                print '\nDEBUG> Cisco ASA/FWSM device detected'
             self.child.sendline('enable')
             self.do_expect(self.child, PASSWORD_PROMPT, LOGINTIMEOUT)
             self.do_sendline(self.enable_password)
             self.do_sendline('terminal pager 0')
         else:
-            raise RcmdError('ERROR: Invalid device type')
-
-        self.do_set_prompt()
-
-        self.connected = True
+            raise RcmdError('ERROR: Unknown device type')
 
         return True
 
