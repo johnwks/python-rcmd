@@ -19,10 +19,12 @@ def usage():
 
         Options:
         -d              Debug mode
+        -a              Autodetect OS
+        -e              Enter enable mode
         -h <host,...>   Define a custom host entry to use. The format is hostname,IP,type,method,proxy,auth
                             hostname - hostname of custom host
                             IP - management IP to connect to custom host
-                            type - device type. C=Cisco, F=Cisco Firewall, J=Juniper, A=Arista
+                            type - device type. C=Cisco IOS, N=Cisco NX-OS, E=Cisco ACE, F=Cisco ASA/FWSM Firewall, J=Juniper JunOS, A=Arista EOS
                             method - connection method. S=SSH, T=telnet
                             proxy - proxy ID to use
                             auth - auth ID to use
@@ -37,12 +39,14 @@ def main():
     timeout = 45
     debug = False
     chgprompt = False
+    osdetect = False
+    enablemode = False
 
     reload(sys)
     sys.setdefaultencoding('utf-8')
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'c:i:l:t:h:d')
+        opts, args = getopt.getopt(sys.argv[1:], 'c:i:l:t:h:dae')
     except getopt.GetoptError:
         usage()
 
@@ -62,6 +66,10 @@ def main():
             customhost = arg
         elif opt == '-d':
             debug = True
+        elif opt == '-a':
+            osdetect = True
+        elif opt == '-e':
+            enablemode = True
         else:
             usage()
 
@@ -83,9 +91,9 @@ def main():
     try:
         if customhost is not None:
             host = customhost
-            dev = Device(cfgfile=cfgfile, customhost=customhost)
+            dev = Device(cfgfile=cfgfile, customhost=customhost, osdetect=osdetect)
         else:
-            dev = Device(cfgfile=cfgfile, host=host)
+            dev = Device(cfgfile=cfgfile, host=host, osdetect=osdetect)
     except RcmdError as e:
         print e.value, '-', host
         sys.exit(1)
@@ -102,7 +110,7 @@ def main():
     os.environ['TERM'] = 'vt100'
 
     try:
-        dev.connect(debug, timeout)
+        dev.connect(debug, timeout, enablemode)
     except RcmdError as e:
         print e.value, '-', dev.host
         sys.exit(1)

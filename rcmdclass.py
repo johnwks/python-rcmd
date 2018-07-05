@@ -19,6 +19,7 @@ PROMPT_CHAR = '[#>%]'
 PASSWORD_PROMPT = '[Pp]assword:'
 MAXREAD = 4000 * 1024
 LOGINTIMEOUT = 30
+MORE_PROMPTS = '[Mm]ore( \d+\%\)---|\)---|--| --->)'
 
 
 class RcmdError(Exception):
@@ -29,7 +30,7 @@ class RcmdError(Exception):
 
 class Device(object):
 
-    def __init__(self, cfgfile=None, host=None, hostregex=None, customhost=None):
+    def __init__(self, cfgfile=None, host=None, hostregex=None, customhost=None, osdetect=False):
         self.cfgfile = cfgfile
         self.host = host
         if hostregex is not None:
@@ -55,6 +56,8 @@ class Device(object):
         self.timeout = 45
         self.buffer = None
         self.prompt = BASE_PROMPT
+        self.osdetect = osdetect
+        self.enablemode = False
         HostList = []
         HostDict = {}
 
@@ -198,7 +201,7 @@ class Device(object):
         return None
 
 
-    def connect(self, debug=False, timeout=45):
+    def connect(self, debug=False, timeout=45, enablemode=False):
         self.debug = debug
         self.timeout = timeout
 
@@ -211,35 +214,152 @@ class Device(object):
         if self.child is None:
             raise RcmdError('ERROR: Unable to connect')
 
-        if self.dtype == 'C':
-            self.do_sendline('terminal length 0')
-            self.do_sendline('terminal width 0')
-        elif self.dtype == 'N':
-            self.do_sendline('terminal length 0')
-            self.do_sendline('terminal width 511')
-        elif self.dtype == 'J':
-            self.do_sendline('set cli screen-length 0')
-            self.do_sendline('set cli screen-width 0')
-            self.child.send(chr(0x1b))
-            self.child.send('q')
-            self.do_sendline('')
-        elif self.dtype == 'A':
-            self.do_sendline('terminal length 0')
-            self.do_sendline('terminal width 32767')
-        elif self.dtype == 'E':
-            self.do_sendline('terminal length 0')
-            self.do_sendline('terminal width 511')
-        elif self.dtype == 'F':
+        if enablemode or self.dtype == 'F':
             self.child.sendline('enable')
-            self.do_expect(self.child, PASSWORD_PROMPT, LOGINTIMEOUT)
-            self.do_sendline(self.enable_password)
-            self.do_sendline('terminal pager 0')
-        else:
-            raise RcmdError('ERROR: Invalid device type')
+            myexp = self.child.expect([PASSWORD_PROMPT, HOST_PROMPT, pexpect.EOF, pexpect.TIMEOUT], timeout=LOGINTIMEOUT)
+            if myexp == 0:
+                self.do_sendline(self.enable_password)
+            elif myexp == 1:
+                pass
+            elif myexp == 2:
+                raise RcmdError('ERROR: EOF encountered')
+            elif myexp == 3:
+                raise RcmdError('ERROR: Timeout encountered')
+            else:
+                raise RcmdError('ERROR: Unknown expect error')
+            self.buffer = self.child.before
 
         self.do_set_prompt()
+        if self.osdetect:
+            self.os_detect()
+        else:
+            if self.dtype == 'J':
+                self.init_device_junos()
+            elif self.dtype == 'A':
+                self.init_device_eos()
+            elif self.dtype == 'C':
+                self.init_device_ios()
+            elif self.dtype == 'N':
+                self.init_device_nxos()
+            elif self.dtype == 'E':
+                self.init_device_ace()
+            elif self.dtype == 'F':
+                self.init_device_asa()
+            else:
+                raise RcmdError('ERROR: Unknown device type')
 
         self.connected = True
+
+        return True
+
+
+    def os_detect(self):
+        got_prompt = False
+        output = ''
+
+        # Required to prevent Arista EOS from sending control characters in prompt
+        self.do_sendline('terminal length 0')
+
+        self.child.sendline('show version')
+
+        while got_prompt is False:
+            myexp = self.child.expect([self.prompt, MORE_PROMPTS, pexpect.EOF, pexpect.TIMEOUT], timeout=5)
+            if myexp == 0:
+                output = output + self.child.before
+                got_prompt = True
+            elif myexp == 1:
+                output = output + self.child.before
+                self.child.send(' ')
+            elif myexp == 2:
+                raise RcmdError('ERROR: EOF encountered')
+            elif myexp == 3:
+                raise RcmdError('ERROR: Timeout encountered')
+            else:
+                raise RcmdError('ERROR: Unknown expect error')
+
+        if re.search('\nJUNOS ', output):
+            self.dtype = 'J'
+            if self.debug:
+                print '\nDEBUG> Juniper JunOS device detected'
+            self.init_device_junos()
+        elif re.search('Arista', output):
+            self.dtype = 'A'
+            if self.debug:
+                print '\nDEBUG> Arista EOS device detected'
+            self.init_device_eos()
+        elif re.search('(Cisco IOS|\ncisco )', output):
+            self.dtype = 'C'
+            if self.debug:
+                print '\nDEBUG> Cisco IOS device detected'
+            self.init_device_ios()
+        elif re.search('Cisco Nexus', output):
+            self.dtype = 'N'
+            if self.debug:
+                print '\nDEBUG> Cisco NX-OS device detected'
+            self.init_device_nxos()
+        elif re.search('Cisco Application Control', output):
+            self.dtype = 'E'
+            if self.debug:
+                print '\nDEBUG> Cisco ACE device detected'
+            self.init_device_ace()
+        elif re.search('\n(Cisco Adaptive Security|FWSM)', output):
+            self.dtype = 'F'
+            if self.debug:
+                print '\nDEBUG> Cisco ASA/FWSM device detected'
+            self.init_device_asa()
+        else:
+            raise RcmdError('ERROR: Unknown device type')
+
+        return True
+
+
+    def init_device_junos(self):
+        self.do_sendline('set cli screen-length 0')
+        self.do_sendline('set cli screen-width 0')
+        self.child.send(chr(0x1b))
+        self.child.send('q')
+        self.do_sendline('')
+
+        return True
+
+
+    def init_device_eos(self):
+        self.do_sendline('terminal length 0')
+        self.do_sendline('terminal width 32767')
+
+        return True
+
+
+    def init_device_ios(self):
+        self.do_sendline('terminal length 0')
+        self.do_sendline('terminal width 0')
+
+        return True
+
+
+    def init_device_nxos(self):
+        self.do_sendline('terminal length 0')
+        self.do_sendline('terminal width 511')
+
+        return True
+
+
+    def init_device_ace(self):
+        self.do_sendline('terminal length 0')
+        self.do_sendline('terminal width 511')
+
+        return True
+
+
+    def init_device_asa(self):
+        self.do_sendline('terminal pager 0')
+
+        return True
+
+
+    def dump_hex(self, output):
+        out1 = ':'.join('{:02x}'.format(ord(c)) for c in output)
+        print out1
 
         return True
 
