@@ -102,9 +102,12 @@ CREATE TABLE Devices (
 );
 ```
 
+Fields descriptions :-
+```
 Hostname - Unique hostname of device
 MgmtIP - Unique IP address of device
 DeviceType - C = Cisco IOS, N = Cisco NX-OS, E = Cisco ACE, F = Cisco ASA/FWSM Firewall, J = Juniper JunOS, A = Arista EOS
 ConnMethod - S - SSH, T - Telnet
 ProxyID - number to indicate which [Proxy#] section to use in config file. 0 for no proxy.
 AuthID - number to indicate which [Auth#] section to use in config file.
+```
