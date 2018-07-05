@@ -1,3 +1,6 @@
+.gitignore
 cmd*
 *.pyc
 archive/
+check-dtype.py
+check-hostname.py
