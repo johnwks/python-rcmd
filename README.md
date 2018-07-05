@@ -7,25 +7,25 @@ Tested on Cisco IOS, NX-OS, ASA, ACE, Arista EOS and Juniper JunOS devices.
 
 Usage:
 ```
-        rcmd.py -c cmdfile -i cfgfile [options] host
+rcmd.py -c cmdfile -i cfgfile [options] host
 
-        -c cmdfile      Commands file
-        -i cfgfile      Config file
-        host            Hostname of device to connect to (MUST exist in device DB)
+-c cmdfile      Commands file
+-i cfgfile      Config file
+host            Hostname of device to connect to (MUST exist in device DB)
 
-        Options:
-        -d              Debug mode
-        -a              Autodetect OS
-        -e              Enter enable mode
-        -h <host,...>   Define a custom host entry to use. The format is hostname,IP,type,method,proxy,auth
-                            hostname - hostname of custom host
-                            IP - management IP to connect to custom host
-                            type - device type. C=Cisco IOS, N=Cisco NX-OS, E=Cisco ACE, F=Cisco ASA/FWSM Firewall, J=Juniper JunOS, A=Arista EOS
-                            method - connection method. S=SSH, T=telnet
-                            proxy - proxy ID to use
-                            auth - auth ID to use
-        -l logfile      Define a logfile to send output to
-        -t timeout      Define timeout for commands (default 45 seconds)
+Options:
+-d              Debug mode
+-a              Autodetect OS
+-e              Enter enable mode
+-h <host,...>   Define a custom host entry to use. The format is hostname,IP,type,method,proxy,auth
+                    hostname - hostname of custom host
+                    IP - management IP to connect to custom host
+                    type - device type. C=Cisco IOS, N=Cisco NX-OS, E=Cisco ACE, F=Cisco ASA/FWSM Firewall, J=Juniper JunOS, A=Arista EOS
+                    method - connection method. S=SSH, T=telnet
+                    proxy - proxy ID to use
+                    auth - auth ID to use
+-l logfile      Define a logfile to send output to
+-t timeout      Define timeout for commands (default 45 seconds)
 ```
 
 Command file - text file containing list of commands to run. e.g.
@@ -102,9 +102,9 @@ CREATE TABLE Devices (
 );
 ```
 
-    Hostname - Unique hostname of device
-    MgmtIP - Unique IP address of device
-    DeviceType - C = Cisco IOS, N = Cisco NX-OS, E = Cisco ACE, F = Cisco ASA/FWSM Firewall, J = Juniper JunOS, A = Arista EOS
-    ConnMethod - S - SSH, T - Telnet
-    ProxyID - number to indicate which [Proxy#] section to use in config file. 0 for no proxy.
-    AuthID - number to indicate which [Auth#] section to use in config file.
+Hostname - Unique hostname of device
+MgmtIP - Unique IP address of device
+DeviceType - C = Cisco IOS, N = Cisco NX-OS, E = Cisco ACE, F = Cisco ASA/FWSM Firewall, J = Juniper JunOS, A = Arista EOS
+ConnMethod - S - SSH, T - Telnet
+ProxyID - number to indicate which [Proxy#] section to use in config file. 0 for no proxy.
+AuthID - number to indicate which [Auth#] section to use in config file.
