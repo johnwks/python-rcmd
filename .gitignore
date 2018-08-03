@@ -2,6 +2,5 @@
 cmd*
 *.pyc
 archive/
-check-dtype.py
-check-hostname.py
+check-*.py
 *jumpbox
