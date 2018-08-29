@@ -58,7 +58,7 @@ def main():
         sys.exit(1)
 
     try:
-        dev = Device(cfgfile=cfgfile, host=host)
+        dev = Device(cfgfile=cfgfile, host=host, osdetect=True)
     except RcmdError as e:
         print e.value, '-', host
         sys.exit(1)
@@ -71,8 +71,6 @@ def main():
         method = 'Unknown'
 
     dbtype = dev.dtype
-
-    #print '!!! Connecting to %s (%s) using %s !!!' %(dev.host, dev.ip, method)
 
     try:
         dev.connect(debug, timeout)
