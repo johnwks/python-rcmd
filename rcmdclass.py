@@ -13,13 +13,13 @@ import pexpect
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
 SOCAT = '/usr/bin/socat'
-BASE_PROMPT = '[\r\n]([\w\d\-\+\@\/\.\(\)]+[#>%]|[#>%])'
-HOST_PROMPT = '(.*)[#>%]'
-PROMPT_CHAR = '[#>%]'
+BASE_PROMPT = r'[\r\n]([\w\d\-\+\@\/\.\(\)\~\:\/]+[#>%\$]|[#>%\$])'
+HOST_PROMPT = r'(.*)[#>%\$]'
+PROMPT_CHAR = r'[#>%\$]'
 PASSWORD_PROMPT = '[Pp]assword:'
 MAXREAD = 4000 * 1024
 LOGINTIMEOUT = 30
-MORE_PROMPTS = '[Mm]ore( \d+\%\)---|\)---|--| --->)'
+MORE_PROMPTS = r'[Mm]ore( \d+\%\)---|\)---|--| --->)'
 
 
 class RcmdError(Exception):
@@ -206,13 +206,11 @@ class Device(object):
         self.timeout = timeout
 
         if self.conn == 'S':
-            self.child = self.do_spawn_ssh()
+            self.do_spawn_ssh()
         elif self.conn == 'T':
-            self.child = self.do_spawn_telnet()
+            self.do_spawn_telnet()
         else:
             raise RcmdError('ERROR: Invalid connection type')
-        if self.child is None:
-            raise RcmdError('ERROR: Unable to connect')
 
         if enablemode or self.dtype == 'F':
             self.child.sendline('enable')
@@ -245,6 +243,8 @@ class Device(object):
                 self.init_device_ace()
             elif self.dtype == 'F':
                 self.init_device_asa()
+            elif self.dtype == 'S':
+                pass
             else:
                 raise RcmdError('ERROR: Unknown device type')
 
@@ -277,32 +277,32 @@ class Device(object):
             else:
                 raise RcmdError('ERROR: Unknown expect error')
 
-        if re.search('\nJUNOS ', output):
+        if re.search(r'\nJUNOS ', output):
             self.dtype = 'J'
             if self.debug:
                 print '\nDEBUG> Juniper JunOS device detected'
             self.init_device_junos()
-        elif re.search('Arista', output):
+        elif re.search(r'Arista', output):
             self.dtype = 'A'
             if self.debug:
                 print '\nDEBUG> Arista EOS device detected'
             self.init_device_eos()
-        elif re.search('(Cisco IOS|\ncisco )', output):
+        elif re.search(r'(Cisco IOS|\ncisco )', output):
             self.dtype = 'C'
             if self.debug:
                 print '\nDEBUG> Cisco IOS device detected'
             self.init_device_ios()
-        elif re.search('Cisco Nexus', output):
+        elif re.search(r'Cisco Nexus', output):
             self.dtype = 'N'
             if self.debug:
                 print '\nDEBUG> Cisco NX-OS device detected'
             self.init_device_nxos()
-        elif re.search('Cisco Application Control', output):
+        elif re.search(r'Cisco Application Control', output):
             self.dtype = 'E'
             if self.debug:
                 print '\nDEBUG> Cisco ACE device detected'
             self.init_device_ace()
-        elif re.search('\n(Cisco Adaptive Security|FWSM)', output):
+        elif re.search(r'\n(Cisco Adaptive Security|FWSM)', output):
             self.dtype = 'F'
             if self.debug:
                 print '\nDEBUG> Cisco ASA/FWSM device detected'
@@ -366,31 +366,31 @@ class Device(object):
 
     def do_spawn_ssh(self):
         if self.sshconfig is None:
-            mychild = pexpect.spawn(SSH, ['-l', self.username, self.ip])
+            self.child = pexpect.spawn(SSH, ['-l', self.username, self.ip])
         else:
-            mychild = pexpect.spawn(SSH, ['-F', self.sshconfig, '-l', self.username, self.ip])
-        mychild.maxread = MAXREAD
+            self.child = pexpect.spawn(SSH, ['-F', self.sshconfig, '-l', self.username, self.ip])
+        self.child.maxread = MAXREAD
         if self.debug:
-            mychild.logfile_read = sys.stdout
-        self.do_expect(mychild, PASSWORD_PROMPT, LOGINTIMEOUT)
+            self.child.logfile_read = sys.stdout
+        self.do_expect(PASSWORD_PROMPT, LOGINTIMEOUT)
         time.sleep(1)
-        mychild.sendline(self.password)
-        self.do_expect(mychild, self.prompt, LOGINTIMEOUT)
-        return mychild
+        self.child.sendline(self.password)
+        self.do_expect(self.prompt, LOGINTIMEOUT)
+        return True
 
 
     def do_spawn_telnet(self):
         if self.pserver is None:
-            mychild = pexpect.spawn(TELNET, [self.ip])
+            self.child = pexpect.spawn(TELNET, [self.ip])
         else:
             arglist = ['-,rawer']
             arg2 = 'socks4:%s:%s:23,socksport=%s' %(self.pserver, self.ip, self.pport)
             arglist.append(arg2)
-            mychild = pexpect.spawn(SOCAT, arglist)
-        mychild.maxread = MAXREAD
+            self.child = pexpect.spawn(SOCAT, arglist)
+        self.child.maxread = MAXREAD
         if self.debug:
-            mychild.logfile_read = sys.stdout
-        myexp = mychild.expect(['sername:', 'ogin:', pexpect.EOF, pexpect.TIMEOUT], timeout=LOGINTIMEOUT)
+            self.child.logfile_read = sys.stdout
+        myexp = self.child.expect(['sername:', 'ogin:', pexpect.EOF, pexpect.TIMEOUT], timeout=LOGINTIMEOUT)
         if myexp == 0 or myexp == 1:
             pass
         elif myexp == 2:
@@ -399,26 +399,26 @@ class Device(object):
             raise RcmdError('ERROR: Timeout encountered')
         else:
             raise RcmdError('ERROR: Unknown expect error')
-        mychild.sendline(self.username)
-        self.do_expect(mychild, PASSWORD_PROMPT, LOGINTIMEOUT)
+        self.child.sendline(self.username)
+        self.do_expect(PASSWORD_PROMPT, LOGINTIMEOUT)
         time.sleep(1)
-        mychild.sendline(self.password)
-        self.do_expect(mychild, self.prompt, LOGINTIMEOUT)
-        return mychild
+        self.child.sendline(self.password)
+        self.do_expect(self.prompt, LOGINTIMEOUT)
+        return True
 
 
     def do_set_prompt(self):
         self.child.sendline('')
-        self.do_expect(self.child, self.prompt, self.timeout)
+        self.do_expect(self.prompt, self.timeout)
         self.prompt = self.child.match.group(0)
         m = re.search(HOST_PROMPT, self.prompt)
         if m.group(1) is not None:
-            self.prompt = '\r\n%s%s' %(re.escape(m.group(1)), PROMPT_CHAR)
+            self.prompt = r'\r\n%s\S*%s' %(m.group(1), PROMPT_CHAR)
         return True
 
 
-    def do_expect(self, mychild, myexpect, mytimeout):
-        myexp = mychild.expect([myexpect, pexpect.EOF, pexpect.TIMEOUT], timeout=mytimeout)
+    def do_expect(self, myexpect, mytimeout):
+        myexp = self.child.expect([myexpect, pexpect.EOF, pexpect.TIMEOUT], timeout=mytimeout)
         if myexp == 0:
             pass
         elif myexp == 1:
@@ -427,20 +427,25 @@ class Device(object):
             raise RcmdError('ERROR: Timeout encountered')
         else:
             raise RcmdError('ERROR: Unknown expect error')
-        self.buffer = mychild.before
+        self.buffer = self.child.before
         return True
 
 
     def do_sendline(self, line):
         self.child.sendline(line)
-        self.do_expect(self.child, self.prompt, self.timeout)
+        self.do_expect(self.prompt, self.timeout)
+        return True
+
+
+    def do_sendline_noexpect(self, line):
+        self.child.sendline(line)
         return True
 
 
     def do_sendline_setprompt(self, line):
         self.child.sendline(line)
         self.prompt = BASE_PROMPT
-        self.do_expect(self.child, self.prompt, self.timeout)
+        self.do_expect(self.prompt, self.timeout)
         self.do_set_prompt()
         return True
 
