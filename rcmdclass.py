@@ -201,7 +201,7 @@ class Device(object):
         return None
 
 
-    def connect(self, debug=False, timeout=45, enablemode=False):
+    def connect(self, debug=False, timeout=45, enablemode=False, smartprompt=True):
         self.debug = debug
         self.timeout = timeout
 
@@ -227,7 +227,9 @@ class Device(object):
                 raise RcmdError('ERROR: Unknown expect error')
             self.buffer = self.child.before
 
-        self.do_set_prompt()
+        if smartprompt:
+            self.do_set_prompt()
+
         if self.osdetect:
             self.os_detect()
         else:
@@ -431,6 +433,13 @@ class Device(object):
         return True
 
 
+    def do_expectraw(self, myexpect, mytimeout):
+        myexp = self.child.expect([myexpect, pexpect.EOF, pexpect.TIMEOUT], timeout=mytimeout)
+        if myexp == 0:
+            self.buffer = self.child.before
+        return myexp
+
+
     def do_sendline(self, line):
         self.child.sendline(line)
         self.do_expect(self.prompt, self.timeout)
@@ -439,6 +448,11 @@ class Device(object):
 
     def do_sendline_noexpect(self, line):
         self.child.sendline(line)
+        return True
+
+
+    def do_sendraw_noexpect(self, line):
+        self.child.send(line)
         return True
 
 

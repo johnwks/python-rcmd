@@ -21,6 +21,7 @@ def usage():
         -d              Debug mode
         -a              Autodetect OS
         -e              Enter enable mode
+        -n              Disable "smart prompt" detection
         -h <host,...>   Define a custom host entry to use. The format is hostname,IP,type,method,proxy,auth
                             hostname - hostname of custom host
                             IP - management IP to connect to custom host
@@ -41,12 +42,13 @@ def main():
     chgprompt = False
     osdetect = False
     enablemode = False
+    smartprompt = True
 
     reload(sys)
     sys.setdefaultencoding('utf-8')
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'c:i:l:t:h:dae')
+        opts, args = getopt.getopt(sys.argv[1:], 'c:i:l:t:h:daen')
     except getopt.GetoptError:
         usage()
 
@@ -70,6 +72,8 @@ def main():
             osdetect = True
         elif opt == '-e':
             enablemode = True
+        elif opt == '-n':
+            smartprompt = False
         else:
             usage()
 
@@ -110,7 +114,7 @@ def main():
     os.environ['TERM'] = 'vt100'
 
     try:
-        dev.connect(debug, timeout, enablemode)
+        dev.connect(debug, timeout, enablemode, smartprompt)
     except RcmdError as e:
         print e.value, '-', dev.host
         sys.exit(1)
@@ -131,10 +135,29 @@ def main():
     for cmd in cmdf:
         line = cmd.rstrip()
         # Ignore lines starting with # or ! as comments
-        if re.search('^[^#!]', line):
+        if re.search(r'^[^#!]', line):
             # Asterisk (*) at the beginning of the line means the next command will change the prompt
-            if re.search('^[*]', line):
+            if re.search(r'^[*]', line):
                 chgprompt = True
+            # @ at the beginning of the line - send with timeout while not expecting standard prompt. @,timeout,send_string,expect_string
+            elif re.search(r'^@', line):
+                match = re.search(r'^@,(\d+),(.+),(.+)', line)
+                if match:
+                    n = match.group(1)
+                    try:
+                        waitsec = int(n)
+                    except ValueError:
+                        print 'ERROR: Value after @ needs to be an integer'
+                        sys.exit(1)
+                    send_string = match.group(2)
+                    expect_string = match.group(3)
+                else:
+                    print 'ERROR: @ should be in the format :- @,timeout,send_string,expect_string'
+                    sys.exit(1)
+                if debug:
+                    print '\n>>DEBUG: waitsec - %i, send_string - %s, expect_string - %s\n' %(waitsec, send_string, expect_string)
+                dev.do_sendline_noexpect(send_string)
+                dev.do_expect(expect_string, waitsec)
             else:
                 try:
                     if chgprompt is True:

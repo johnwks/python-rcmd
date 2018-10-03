@@ -23,10 +23,8 @@ def usage():
 
 
 def main():
-    logfile = None
     timeout = 45
     debug = False
-    chgprompt = False
 
     reload(sys)
     sys.setdefaultencoding('utf-8')
@@ -63,13 +61,6 @@ def main():
         print e.value, '-', host
         sys.exit(1)
 
-    if dev.conn == 'S':
-        method = 'SSH'
-    elif dev.conn == 'T':
-        method = 'Telnet'
-    else:
-        method = 'Unknown'
-
     try:
         dev.connect(debug, timeout)
     except RcmdError as e:
@@ -77,7 +68,11 @@ def main():
         sys.exit(1)
 
     devprompt = dev.prompt
-    detected_hostname = re.sub(r'[\r\n#>%\[\]\\]', '', devprompt)
+    #print devprompt
+    #dev.dump_hex(devprompt)
+    detected_hostname = re.sub(r'\\r|\\n|\\S.*|\r|\n', '', devprompt)
+    #print detected_hostname
+    #dev.dump_hex(detected_hostname)
     if re.search(r'@', detected_hostname):
         aa = detected_hostname.split(r'@')
         detected_hostname = aa[1]
@@ -87,7 +82,7 @@ def main():
     if dev.host != detected_hostname:
         print '%s - Hostname mismatch (DB == %s but detected == %s)' %(dev.host, dev.host, detected_hostname)
     else:
-        print '%s - OK' %(dev.host)
+        print '%s - OK' %(host)
 
     dev.disconnect()
 
