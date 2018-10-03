@@ -26,6 +26,7 @@ def usage():
         -d              Debug mode
         -p <a,b,c>      Cycle through proxies (separated by comma and no spaces) and exit on success. Default is 0.
         -a <AUTH_ID>    Use Auth ID. Default is 1
+        -t timeout      Define timeout for commands (default 45 seconds)
 '''
     sys.exit(1)
 
@@ -47,7 +48,7 @@ def main():
     signal.signal(signal.SIGINT, sigint_handler)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'i:h:dp:a:', ['ip='])
+        opts, args = getopt.getopt(sys.argv[1:], 'i:h:dp:a:t:', ['ip='])
     except getopt.GetoptError:
         usage()
 
@@ -62,6 +63,8 @@ def main():
             proxylist = arg.split(',')
         elif opt == '-a':
             USE_AUTH = arg
+        elif opt == '-t':
+            timeout = int(arg)
         elif opt == '--ip':
             ip = arg
         else:

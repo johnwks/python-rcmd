@@ -265,7 +265,7 @@ class Device(object):
         self.child.sendline('show version')
 
         while got_prompt is False:
-            myexp = self.child.expect([self.prompt, MORE_PROMPTS, pexpect.EOF, pexpect.TIMEOUT], timeout=5)
+            myexp = self.child.expect([self.prompt, MORE_PROMPTS, pexpect.EOF, pexpect.TIMEOUT], timeout=self.timeout)
             if myexp == 0:
                 output = output + self.child.before
                 got_prompt = True
