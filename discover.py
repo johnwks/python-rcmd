@@ -94,6 +94,9 @@ def main():
             try:
                 dev.connect(debug, timeout)
             except RcmdError as e:
+                if e.value == 'ERROR: Unknown device type':
+                    print '%s - %s %s (%s)' %(e.value, host, ip, proxy)
+                    sys.exit(1)
                 if debug:
                     print '%s - %s %s' %(e.value, host, ip)
             if dev.connected:
