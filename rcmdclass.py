@@ -415,7 +415,8 @@ class Device(object):
         self.prompt = self.child.match.group(0)
         m = re.search(HOST_PROMPT, self.prompt)
         if m.group(1) is not None:
-            self.prompt = r'\r\n%s\S*%s' %(m.group(1), PROMPT_CHAR)
+            prompt1 = re.escape(m.group(1))
+            self.prompt = r'\r\n%s\S*%s' %(prompt1, PROMPT_CHAR)
         return True
 
 

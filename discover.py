@@ -111,7 +111,7 @@ def main():
     devprompt = dev.prompt
     #print devprompt
     #dev.dump_hex(devprompt)
-    detected_hostname = re.sub(r'\\r|\\n|\\S.*|\r|\n', '', devprompt)
+    detected_hostname = re.sub(r'\\r|\\n|\\S.*|\r|\n|\\', '', devprompt)
     #print detected_hostname
     #dev.dump_hex(detected_hostname)
     if re.search(r'@', detected_hostname):
