@@ -1,1 +1,3 @@
 language: python
+script: rcmd.py -h
+
