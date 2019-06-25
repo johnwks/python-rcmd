@@ -1,11 +1,11 @@
-#!/bin/env python
+#!/bin/env python3
 
 # pylint: disable=missing-docstring, locally-disabled, invalid-name, line-too-long, anomalous-backslash-in-string, too-many-arguments, too-many-locals, too-many-branches, too-many-statements
 
 import sys
 import time
 import re
-import ConfigParser
+import configparser
 import sqlite3
 import pexpect
 
@@ -73,7 +73,7 @@ class Device(object):
             raise RcmdError('ERROR: Unable to open cfgfile')
         cfgf.close()
 
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(self.cfgfile)
 
         if customhost is not None:
@@ -145,7 +145,7 @@ class Device(object):
                             cmethod = 'Telnet'
                         else:
                             cmethod = 'Unknown'
-                        print "%s) %s %s %s" %(str(idx).rjust(4), host.ljust(28), ip.ljust(16), cmethod)
+                        print('%s) %s %s %s' %(str(idx).rjust(4), host.ljust(28), ip.ljust(16), cmethod))
                         idx += 1
                     inidx = raw_input('Enter selection (default is 1, q to quit): ')
                     isvalid = False
@@ -178,7 +178,7 @@ class Device(object):
 
         try:
             include_auth = config.get(authsection, 'include_auth')
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             self.username = config.get(authsection, 'username')
             self.password = config.get(authsection, 'password')
         else:
@@ -187,7 +187,7 @@ class Device(object):
 
         try:
             self.enable_password = config.get(authsection, 'enable_password')
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             self.enable_password = self.password
 
         if self.proxy != 0:
@@ -282,32 +282,32 @@ class Device(object):
         if re.search(r'\nJUNOS ', output):
             self.dtype = 'J'
             if self.debug:
-                print '\nDEBUG> Juniper JunOS device detected'
+                print('\nDEBUG> Juniper JunOS device detected')
             self.init_device_junos()
         elif re.search(r'Arista', output):
             self.dtype = 'A'
             if self.debug:
-                print '\nDEBUG> Arista EOS device detected'
+                print('\nDEBUG> Arista EOS device detected')
             self.init_device_eos()
         elif re.search(r'(Cisco IOS|\ncisco )', output):
             self.dtype = 'C'
             if self.debug:
-                print '\nDEBUG> Cisco IOS device detected'
+                print('\nDEBUG> Cisco IOS device detected')
             self.init_device_ios()
         elif re.search(r'Cisco Nexus', output):
             self.dtype = 'N'
             if self.debug:
-                print '\nDEBUG> Cisco NX-OS device detected'
+                print('\nDEBUG> Cisco NX-OS device detected')
             self.init_device_nxos()
         elif re.search(r'Cisco Application Control', output):
             self.dtype = 'E'
             if self.debug:
-                print '\nDEBUG> Cisco ACE device detected'
+                print('\nDEBUG> Cisco ACE device detected')
             self.init_device_ace()
         elif re.search(r'\n(Cisco Adaptive Security|FWSM)', output):
             self.dtype = 'F'
             if self.debug:
-                print '\nDEBUG> Cisco ASA/FWSM device detected'
+                print('\nDEBUG> Cisco ASA/FWSM device detected')
             self.init_device_asa()
         else:
             raise RcmdError('ERROR: Unknown device type')
@@ -361,16 +361,16 @@ class Device(object):
 
     def dump_hex(self, output):
         out1 = ':'.join('{:02x}'.format(ord(c)) for c in output)
-        print out1
+        print(out1)
 
         return True
 
 
     def do_spawn_ssh(self):
         if self.sshconfig is None:
-            self.child = pexpect.spawn(SSH, ['-l', self.username, self.ip])
+            self.child = pexpect.spawn(SSH, ['-l', self.username, self.ip], encoding='utf-8')
         else:
-            self.child = pexpect.spawn(SSH, ['-F', self.sshconfig, '-l', self.username, self.ip])
+            self.child = pexpect.spawn(SSH, ['-F', self.sshconfig, '-l', self.username, self.ip], encoding='utf-8')
         self.child.maxread = MAXREAD
         if self.debug:
             self.child.logfile_read = sys.stdout
@@ -383,12 +383,12 @@ class Device(object):
 
     def do_spawn_telnet(self):
         if self.pserver is None:
-            self.child = pexpect.spawn(TELNET, [self.ip])
+            self.child = pexpect.spawn(TELNET, [self.ip], encoding='utf-8')
         else:
             arglist = ['-,rawer']
             arg2 = 'socks4:%s:%s:23,socksport=%s' %(self.pserver, self.ip, self.pport)
             arglist.append(arg2)
-            self.child = pexpect.spawn(SOCAT, arglist)
+            self.child = pexpect.spawn(SOCAT, arglist, encoding='utf-8')
         self.child.maxread = MAXREAD
         if self.debug:
             self.child.logfile_read = sys.stdout

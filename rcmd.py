@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # pylint: disable=missing-docstring, locally-disabled, invalid-name, line-too-long, anomalous-backslash-in-string, too-many-arguments, too-many-locals, too-many-branches, too-many-statements
 
@@ -11,8 +11,8 @@ from rcmdclass import Device, RcmdError
 
 
 def usage():
-    print 'Usage:\n\t', sys.argv[0], '-c cmdfile -i cfgfile [options] host'
-    print '''
+    print('Usage:\n\t', sys.argv[0], '-c cmdfile -i cfgfile [options] host')
+    print('''
         -c cmdfile      Commands file
         -i cfgfile      Config file
         host            Hostname of device to connect to (MUST exist in device DB)
@@ -31,7 +31,7 @@ def usage():
                             auth - auth ID to use
         -l logfile      Define a logfile to send output to
         -t timeout      Define timeout for commands (default 45 seconds)
-'''
+''')
     sys.exit(1)
 
 
@@ -44,8 +44,8 @@ def main():
     enablemode = False
     smartprompt = True
 
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
+    #reload(sys)
+    #sys.setdefaultencoding('utf-8')
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'c:i:l:t:h:daen')
@@ -83,13 +83,13 @@ def main():
         host = args[0]
 
     if re.match('[#!]', host):
-        print 'Skipping - %s' %(host)
+        print('Skipping - %s' %(host))
         sys.exit(1)
 
     try:
         cmdf = open(cmdfile, 'r')
     except IOError:
-        print 'ERROR: Unable to open cmdfile - %s' %(host)
+        print('ERROR: Unable to open cmdfile - %s' %(host))
         sys.exit(1)
 
     try:
@@ -99,7 +99,7 @@ def main():
         else:
             dev = Device(cfgfile=cfgfile, host=host, osdetect=osdetect)
     except RcmdError as e:
-        print e.value, '-', host
+        print(e.value, '-', host)
         sys.exit(1)
 
     if dev.conn == 'S':
@@ -109,27 +109,27 @@ def main():
     else:
         method = 'Unknown'
 
-    print '!!! Connecting to %s (%s) using %s !!!' %(dev.host, dev.ip, method)
+    print('!!! Connecting to %s (%s) using %s !!!' %(dev.host, dev.ip, method))
 
     os.environ['TERM'] = 'vt100'
 
     try:
         dev.connect(debug, timeout, enablemode, smartprompt)
     except RcmdError as e:
-        print e.value, '-', dev.host
+        print(e.value, '-', dev.host)
         sys.exit(1)
 
     try:
         dev.do_sendline('')
     except RcmdError as e:
-        print e.value, '-', dev.host
+        print(e.value, '-', dev.host)
         sys.exit(1)
 
     if logfile is not None:
         try:
             fout = open(logfile, 'wb')
         except IOError:
-            print 'ERROR: Error opening logfile - %s' %(host)
+            print('ERROR: Error opening logfile - %s' %(host))
             sys.exit(1)
 
     for cmd in cmdf:
@@ -147,15 +147,15 @@ def main():
                     try:
                         waitsec = int(n)
                     except ValueError:
-                        print 'ERROR: Value after @ needs to be an integer'
+                        print('ERROR: Value after @ needs to be an integer')
                         sys.exit(1)
                     send_string = match.group(2)
                     expect_string = match.group(3)
                 else:
-                    print 'ERROR: @ should be in the format :- @,timeout,send_string,expect_string'
+                    print('ERROR: @ should be in the format :- @,timeout,send_string,expect_string')
                     sys.exit(1)
                 if debug:
-                    print '\n>>DEBUG: waitsec - %i, send_string - %s, expect_string - %s\n' %(waitsec, send_string, expect_string)
+                    print('\n>>DEBUG: waitsec - %i, send_string - %s, expect_string - %s\n' %(waitsec, send_string, expect_string))
                 dev.do_sendline_noexpect(send_string)
                 dev.do_expect(expect_string, waitsec)
             else:
@@ -166,7 +166,7 @@ def main():
                     else:
                         dev.do_sendline(line)
                 except RcmdError as e:
-                    print e.value, '-', dev.host
+                    print(e.value, '-', dev.host)
                     sys.exit(1)
                 header = '\n### %s ###\n' %(line)
                 output = dev.do_getbuffer()
@@ -179,7 +179,7 @@ def main():
     if logfile is not None:
         fout.write(trailer + '\n')
         fout.close()
-    print trailer
+    print(trailer)
 
     dev.disconnect()
 
