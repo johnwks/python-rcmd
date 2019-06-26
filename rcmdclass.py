@@ -104,13 +104,13 @@ class Device(object):
                     self.proxy = int(row[4])
                     self.authid = int(row[5])
             else:
-                hostregexsql = 'Hostname NOT NULL'
+                hostregexsql = f'Hostname NOT NULL'
                 for i in self.hostregex:
-                    hostregexsql += ' AND Hostname LIKE "%%%s%%"' %(i)
+                    hostregexsql += f' AND Hostname LIKE "%{i}%"'
 
                 db = sqlite3.connect(SQLDB)
                 cursor = db.cursor()
-                sqlquery = 'SELECT * FROM Devices WHERE %s ORDER BY Hostname ASC' %(hostregexsql)
+                sqlquery = f'SELECT * FROM Devices WHERE {hostregexsql} ORDER BY Hostname ASC'
                 cursor.execute(sqlquery)
                 rows = cursor.fetchall()
                 if not rows:
@@ -145,9 +145,9 @@ class Device(object):
                             cmethod = 'Telnet'
                         else:
                             cmethod = 'Unknown'
-                        print('%s) %s %s %s' %(str(idx).rjust(4), host.ljust(28), ip.ljust(16), cmethod))
+                        print(f'{str(idx).rjust(4)}) {host.ljust(28)} {ip.ljust(16)} {cmethod}')
                         idx += 1
-                    inidx = raw_input('Enter selection (default is 1, q to quit): ')
+                    inidx = input('Enter selection (default is 1, q to quit): ')
                     isvalid = False
                     if inidx == 'q':
                         raise RcmdError('Quitting')
@@ -321,56 +321,49 @@ class Device(object):
         self.child.send(chr(0x1b))
         self.child.send('q')
         self.do_sendline('')
-
         return True
 
 
     def init_device_eos(self):
         self.do_sendline('terminal length 0')
         self.do_sendline('terminal width 32767')
-
         return True
 
 
     def init_device_ios(self):
         self.do_sendline('terminal length 0')
         self.do_sendline('terminal width 0')
-
         return True
 
 
     def init_device_nxos(self):
         self.do_sendline('terminal length 0')
         self.do_sendline('terminal width 511')
-
         return True
 
 
     def init_device_ace(self):
         self.do_sendline('terminal length 0')
         self.do_sendline('terminal width 511')
-
         return True
 
 
     def init_device_asa(self):
         self.do_sendline('terminal pager 0')
-
         return True
 
 
     def dump_hex(self, output):
         out1 = ':'.join('{:02x}'.format(ord(c)) for c in output)
         print(out1)
-
         return True
 
 
     def do_spawn_ssh(self):
         if self.sshconfig is None:
-            self.child = pexpect.spawn(SSH, ['-l', self.username, self.ip], encoding='utf-8')
+            self.child = pexpect.spawn(SSH, ['-l', self.username, self.ip], encoding='utf-8', codec_errors='ignore')
         else:
-            self.child = pexpect.spawn(SSH, ['-F', self.sshconfig, '-l', self.username, self.ip], encoding='utf-8')
+            self.child = pexpect.spawn(SSH, ['-F', self.sshconfig, '-l', self.username, self.ip], encoding='utf-8', codec_errors='ignore')
         self.child.maxread = MAXREAD
         if self.debug:
             self.child.logfile_read = sys.stdout
@@ -383,12 +376,12 @@ class Device(object):
 
     def do_spawn_telnet(self):
         if self.pserver is None:
-            self.child = pexpect.spawn(TELNET, [self.ip], encoding='utf-8')
+            self.child = pexpect.spawn(TELNET, [self.ip], encoding='utf-8', codec_errors='ignore')
         else:
             arglist = ['-,rawer']
-            arg2 = 'socks4:%s:%s:23,socksport=%s' %(self.pserver, self.ip, self.pport)
+            arg2 = f'socks4:{self.pserver}:{self.ip}:23,socksport={self.pport}'
             arglist.append(arg2)
-            self.child = pexpect.spawn(SOCAT, arglist, encoding='utf-8')
+            self.child = pexpect.spawn(SOCAT, arglist, encoding='utf-8', codec_errors='ignore')
         self.child.maxread = MAXREAD
         if self.debug:
             self.child.logfile_read = sys.stdout
@@ -416,7 +409,7 @@ class Device(object):
         m = re.search(HOST_PROMPT, self.prompt)
         if m.group(1) is not None:
             prompt1 = re.escape(m.group(1))
-            self.prompt = r'\r\n%s\S*%s' %(prompt1, PROMPT_CHAR)
+            self.prompt = rf'\r\n{prompt1}\S*{PROMPT_CHAR}'
         return True
 
 

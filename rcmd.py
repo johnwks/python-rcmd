@@ -6,90 +6,50 @@
 import os
 import sys
 import re
-import getopt
+import argparse
 from rcmdclass import Device, RcmdError
 
 
-def usage():
-    print('Usage:\n\t', sys.argv[0], '-c cmdfile -i cfgfile [options] host')
-    print('''
-        -c cmdfile      Commands file
-        -i cfgfile      Config file
-        host            Hostname of device to connect to (MUST exist in device DB)
-
-        Options:
-        -d              Debug mode
-        -a              Autodetect OS
-        -e              Enter enable mode
-        -n              Disable "smart prompt" detection
-        -h <host,...>   Define a custom host entry to use. The format is hostname,IP,type,method,proxy,auth
-                            hostname - hostname of custom host
-                            IP - management IP to connect to custom host
-                            type - device type. C=Cisco IOS, N=Cisco NX-OS, E=Cisco ACE, F=Cisco ASA/FWSM Firewall, J=Juniper JunOS, A=Arista EOS
-                            method - connection method. S=SSH, T=telnet
-                            proxy - proxy ID to use
-                            auth - auth ID to use
-        -l logfile      Define a logfile to send output to
-        -t timeout      Define timeout for commands (default 45 seconds)
-''')
-    sys.exit(1)
-
-
 def main():
-    logfile = None
-    timeout = 45
-    debug = False
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description='Run CLI commands on remote device.')
+    parser.add_argument('host', help='Remote host to connect to.')
+    parser.add_argument('-c', '--cmdfile', required=True, help='Commands file.')
+    parser.add_argument('-i', '--cfgfile', required=True, help='Config file.')
+    parser.add_argument('-d', '--debug', action='store_true', default=False, help='Display debugs output.')
+    parser.add_argument('-a', '--osdetect', action='store_true', default=False, help='Autodetect OS.')
+    parser.add_argument('-e', '--enable', action='store_true', default=False, help='Enter enable mode.')
+    parser.add_argument('-n', '--smart', action='store_true', default=False, help='Disable "smart prompt" detection.')
+    parser.add_argument('-l', '--log', default=None, help='Logfile to send output to.')
+    parser.add_argument('-t', '--timeout', default=45, help='Timeout for commands (default 45 seconds)')
+    parser.add_argument('--custom', default=None, help='''Define a custom host entry to use. The format is hostname,IP,type,method,proxy,auth
+        hostname - hostname of custom host
+        IP - management IP to connect to custom host
+        type - device type. C=Cisco IOS, F=Cisco Firewall, N=Cisco NX-OS, E=Cisco ACE, J=Juniper, A=Arista EOS, S=Server
+        method - connection method. S=SSH, T=telnet
+        proxy - proxy ID to use
+        auth - auth ID to use''')
+    args = parser.parse_args()
+    host = args.host
+    cmdfile = args.cmdfile
+    cfgfile = args.cfgfile
+    debug = args.debug
+    osdetect = args.osdetect
+    enablemode = args.enable
+    smartprompt = args.smart
+    customhost = args.custom
+    logfile = args.log
+    timeout = args.timeout
+
     chgprompt = False
-    osdetect = False
-    enablemode = False
-    smartprompt = True
-
-    #reload(sys)
-    #sys.setdefaultencoding('utf-8')
-
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], 'c:i:l:t:h:daen')
-    except getopt.GetoptError:
-        usage()
-
-    host = None
-    customhost = None
-
-    for opt, arg in opts:
-        if opt == '-c':
-            cmdfile = arg
-        elif opt == '-i':
-            cfgfile = arg
-        elif opt == '-l':
-            logfile = arg
-        elif opt == '-t':
-            timeout = int(arg)
-        elif opt == '-h':
-            customhost = arg
-        elif opt == '-d':
-            debug = True
-        elif opt == '-a':
-            osdetect = True
-        elif opt == '-e':
-            enablemode = True
-        elif opt == '-n':
-            smartprompt = False
-        else:
-            usage()
-
-    if (customhost is None) and (len(args) != 1):
-        usage()
-    else:
-        host = args[0]
 
     if re.match('[#!]', host):
-        print('Skipping - %s' %(host))
+        print(f'Skipping - {host}')
         sys.exit(1)
 
     try:
         cmdf = open(cmdfile, 'r')
     except IOError:
-        print('ERROR: Unable to open cmdfile - %s' %(host))
+        print(f'ERROR: Unable to open cmdfile - {host}')
         sys.exit(1)
 
     try:
@@ -99,7 +59,7 @@ def main():
         else:
             dev = Device(cfgfile=cfgfile, host=host, osdetect=osdetect)
     except RcmdError as e:
-        print(e.value, '-', host)
+        print(f'{e.value} - {host}')
         sys.exit(1)
 
     if dev.conn == 'S':
@@ -109,27 +69,27 @@ def main():
     else:
         method = 'Unknown'
 
-    print('!!! Connecting to %s (%s) using %s !!!' %(dev.host, dev.ip, method))
+    print(f'!!! Connecting to {dev.host} ({dev.ip}) using {method} !!!')
 
     os.environ['TERM'] = 'vt100'
 
     try:
         dev.connect(debug, timeout, enablemode, smartprompt)
     except RcmdError as e:
-        print(e.value, '-', dev.host)
+        print(f'{e.value} - {dev.host}')
         sys.exit(1)
 
     try:
         dev.do_sendline('')
     except RcmdError as e:
-        print(e.value, '-', dev.host)
+        print(f'{e.value} - {dev.host}')
         sys.exit(1)
 
     if logfile is not None:
         try:
-            fout = open(logfile, 'wb')
+            fout = open(logfile, 'w')
         except IOError:
-            print('ERROR: Error opening logfile - %s' %(host))
+            print(f'ERROR: Error opening logfile - {host}')
             sys.exit(1)
 
     for cmd in cmdf:
@@ -155,7 +115,7 @@ def main():
                     print('ERROR: @ should be in the format :- @,timeout,send_string,expect_string')
                     sys.exit(1)
                 if debug:
-                    print('\n>>DEBUG: waitsec - %i, send_string - %s, expect_string - %s\n' %(waitsec, send_string, expect_string))
+                    print(f'\n>>DEBUG: waitsec - {waitsec}, send_string - {send_string}, expect_string - {expect_string}\n')
                 dev.do_sendline_noexpect(send_string)
                 dev.do_expect(expect_string, waitsec)
             else:
@@ -166,16 +126,16 @@ def main():
                     else:
                         dev.do_sendline(line)
                 except RcmdError as e:
-                    print(e.value, '-', dev.host)
+                    print(f'{e.value} - {dev.host}')
                     sys.exit(1)
-                header = '\n### %s ###\n' %(line)
+                header = f'\n### {line} ###\n'
                 output = dev.do_getbuffer()
                 if logfile is not None:
                     fout.write(header + '\n')
                     fout.write(output + '\n')
                     fout.flush()
 
-    trailer = '\n!!! Completed     %s (%s) !!!' %(dev.host, dev.ip)
+    trailer = f'\n!!! Completed     {dev.host} {dev.ip}) !!!'
     if logfile is not None:
         fout.write(trailer + '\n')
         fout.close()
