@@ -18,7 +18,7 @@ def main():
     parser.add_argument('-d', '--debug', action='store_true', default=False, help='Display debugs output.')
     parser.add_argument('-a', '--osdetect', action='store_true', default=False, help='Autodetect OS.')
     parser.add_argument('-e', '--enable', action='store_true', default=False, help='Enter enable mode.')
-    parser.add_argument('-n', '--smart', action='store_true', default=False, help='Disable "smart prompt" detection.')
+    parser.add_argument('-n', '--smart', action='store_false', default=True, help='Disable "smart prompt" detection.')
     parser.add_argument('-l', '--log', default=None, help='Logfile to send output to.')
     parser.add_argument('-t', '--timeout', default=45, help='Timeout for commands (default 45 seconds)')
     parser.add_argument('--custom', default=None, help='''Define a custom host entry to use. The format is hostname,IP,type,method,proxy,auth
