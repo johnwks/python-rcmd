@@ -13,7 +13,7 @@ import pexpect
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
 SOCAT = '/usr/bin/socat'
-BASE_PROMPT = r'[\r\n]([\w\d\-\+\@\/\.\(\)\~\:\/]+[#>%\$]|[#>%\$])'
+BASE_PROMPT = r'[\r\n]([\w\d\-\+\@\/\.\(\)\~\:\/\ \[\]]+[#>%\$]|[#>%\$])'
 HOST_PROMPT = r'(.*)[#>%\$]'
 PROMPT_CHAR = r'[#>%\$]'
 PASSWORD_PROMPT = '[Pp]assword:'
@@ -58,6 +58,7 @@ class Device(object):
         self.prompt = BASE_PROMPT
         self.osdetect = osdetect
         self.enablemode = False
+        self.pki = False
         HostList = []
         HostDict = {}
 
@@ -201,9 +202,10 @@ class Device(object):
         return None
 
 
-    def connect(self, debug=False, timeout=45, enablemode=False, smartprompt=True):
+    def connect(self, debug=False, timeout=45, enablemode=False, smartprompt=True, pki=False):
         self.debug = debug
         self.timeout = timeout
+        self.pki = pki
 
         if self.conn == 'S':
             self.do_spawn_ssh()
@@ -245,8 +247,12 @@ class Device(object):
                 self.init_device_ace()
             elif self.dtype == 'F':
                 self.init_device_asa()
-            elif self.dtype == 'S':
-                pass
+            elif self.dtype == 'L':
+                self.init_device_linux()
+            elif self.dtype == 'T':
+                self.init_device_tmos()
+            elif self.dtype == 'P':
+                self.init_device_panos()
             else:
                 raise RcmdError('ERROR: Unknown device type')
 
@@ -353,6 +359,24 @@ class Device(object):
         return True
 
 
+    def init_device_linux(self):
+        pass
+        return True
+
+
+    def init_device_tmos(self):
+        pass
+        return True
+
+
+    def init_device_panos(self):
+        self.do_sendline('set cli pager off')
+        self.do_sendline('set cli terminal width 500')
+        self.do_sendline('set cli scripting-mode on')
+        self.do_sendline('set cli confirmation-prompt off')
+        return True
+
+
     def dump_hex(self, output):
         out1 = ':'.join('{:02x}'.format(ord(c)) for c in output)
         print(out1)
@@ -367,9 +391,10 @@ class Device(object):
         self.child.maxread = MAXREAD
         if self.debug:
             self.child.logfile_read = sys.stdout
-        self.do_expect(PASSWORD_PROMPT, LOGINTIMEOUT)
-        time.sleep(1)
-        self.child.sendline(self.password)
+        if self.pki is False:
+            self.do_expect(PASSWORD_PROMPT, LOGINTIMEOUT)
+            time.sleep(1)
+            self.child.sendline(self.password)
         self.do_expect(self.prompt, LOGINTIMEOUT)
         return True
 

@@ -21,10 +21,11 @@ def main():
     parser.add_argument('-n', '--smart', action='store_false', default=True, help='Disable "smart prompt" detection.')
     parser.add_argument('-l', '--log', default=None, help='Logfile to send output to.')
     parser.add_argument('-t', '--timeout', default=45, help='Timeout for commands (default 45 seconds)')
+    parser.add_argument('-p', '--pki', action='store_true', default=False, help='Use PKI for authentication (SSH only).')
     parser.add_argument('--custom', default=None, help='''Define a custom host entry to use. The format is hostname,IP,type,method,proxy,auth
         hostname - hostname of custom host
         IP - management IP to connect to custom host
-        type - device type. C=Cisco IOS, F=Cisco Firewall, N=Cisco NX-OS, E=Cisco ACE, J=Juniper, A=Arista EOS, S=Server
+        type - device type. C=Cisco IOS, F=Cisco Firewall, N=Cisco NX-OS, E=Cisco ACE, J=Juniper, A=Arista EOS, L=Linux OS, T=F5 TMOS, P=PaloAlto PanOS
         method - connection method. S=SSH, T=telnet
         proxy - proxy ID to use
         auth - auth ID to use''')
@@ -39,6 +40,7 @@ def main():
     customhost = args.custom
     logfile = args.log
     timeout = args.timeout
+    pki = args.pki
 
     chgprompt = False
 
@@ -74,7 +76,7 @@ def main():
     os.environ['TERM'] = 'vt100'
 
     try:
-        dev.connect(debug, timeout, enablemode, smartprompt)
+        dev.connect(debug, timeout, enablemode, smartprompt, pki)
     except RcmdError as e:
         print(f'{e.value} - {dev.host}')
         sys.exit(1)
