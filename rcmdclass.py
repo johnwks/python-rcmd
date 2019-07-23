@@ -13,7 +13,7 @@ import pexpect
 SSH = '/usr/bin/ssh'
 TELNET = '/usr/bin/telnet'
 SOCAT = '/usr/bin/socat'
-BASE_PROMPT = r'[\r\n]([\w\d\-\+\@\/\.\(\)\~\:\/\ \[\]]+[#>%\$]|[#>%\$])'
+BASE_PROMPT = r'[\r\n]([\w\d\-\+\@\/\.\(\)\~\:\/\[\]]+[#>%\$]|[#>%\$])'  # Issue with prompt with spaces (e.g. F5).. allowing space will break others...
 HOST_PROMPT = r'(.*)[#>%\$]'
 PROMPT_CHAR = r'[#>%\$]'
 PASSWORD_PROMPT = '[Pp]assword:'

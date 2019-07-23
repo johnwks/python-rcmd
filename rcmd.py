@@ -39,7 +39,7 @@ def main():
     smartprompt = args.smart
     customhost = args.custom
     logfile = args.log
-    timeout = args.timeout
+    timeout = int(args.timeout)
     pki = args.pki
 
     chgprompt = False
