@@ -5,83 +5,47 @@
 import os
 import sys
 import re
-import getopt
+import argparse
 import signal
 from rcmdclass import Device, RcmdError
 
 
 def sigint_handler(signum, frame):
-    print '\nQuitting script - %s %s' %(signum, frame)
-    sys.exit(1)
-
-
-def usage():
-    print 'Usage:\n\t', sys.argv[0], '-i cfgfile [options] -h host --ip <IP_ADDR>'
-    print '''
-        -i cfgfile      Config file
-        -h host         Hostname of device to connect to
-        --ip <IP_ADDR>  Management IP of device to connect to
-
-        Options:
-        -d              Debug mode
-        -p <a,b,c>      Cycle through proxies (separated by comma and no spaces) and exit on success. Default is 0.
-        -a <AUTH_ID>    Use Auth ID. Default is 1
-        -t timeout      Define timeout for commands (default 45 seconds)
-'''
+    print(f'\nQuitting script - {signum} {frame}')
     sys.exit(1)
 
 
 def main():
-    debug = False
-    host = None
-    timeout = 45
-    connmethod = 'S'
-    USE_AUTH = '1'
-    ip = None
-    cfgfile = None
-    proxylist = ['0']
-
-
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description='Run OS discovery on remote device.')
+    parser.add_argument('-i', '--cfgfile', required=True, help='Config file.')
+    parser.add_argument('--host', required=True, help='Hostname of device to connect to.')
+    parser.add_argument('--ip', required=True, help='Management IP of device to connect to.')
+    parser.add_argument('-d', '--debug', action='store_true', default=False, help='Display debugs output.')
+    parser.add_argument('-p', '--proxy', action='append', type=int, help='Proxy to use (specify multiple times to cycle thru list).')
+    parser.add_argument('-a', '--auth', default=1, type=int, help='Auth ID to use. Default is 1.')
+    parser.add_argument('-t', '--timeout', default=45, type=int, help='Timeout for commands (default 45 seconds)')
+    args = parser.parse_args()
+    cfgfile = args.cfgfile
+    host = args.host
+    ip = args.ip
+    debug = args.debug
+    proxylist = args.proxy
+    if proxylist is None:
+        proxylist = [0]
+    auth = args.auth
+    timeout = args.timeout
 
     signal.signal(signal.SIGINT, sigint_handler)
-
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], 'i:h:dp:a:t:', ['ip='])
-    except getopt.GetoptError:
-        usage()
-
-    for opt, arg in opts:
-        if opt == '-i':
-            cfgfile = arg
-        elif opt == '-h':
-            host = arg
-        elif opt == '-d':
-            debug = True
-        elif opt == '-p':
-            proxylist = arg.split(',')
-        elif opt == '-a':
-            USE_AUTH = arg
-        elif opt == '-t':
-            timeout = int(arg)
-        elif opt == '--ip':
-            ip = arg
-        else:
-            usage()
-
-    if cfgfile is None or host is None or ip is None:
-        usage()
 
     os.environ['TERM'] = 'vt100'
 
     for proxy in proxylist:
         for connmethod in ['S', 'T']:
-            customhost = '%s,%s,C,%s,%s,%s' %(host, ip, connmethod, proxy, USE_AUTH)
+            customhost = f'{host},{ip},C,{connmethod},{proxy},{auth}'
             try:
                 dev = Device(cfgfile=cfgfile, customhost=customhost, osdetect=True)
             except RcmdError as e:
-                print e.value, '-', host
+                print( f'{e.value} - {host}')
                 sys.exit(1)
             if debug:
                 if dev.conn == 'S':
@@ -90,22 +54,22 @@ def main():
                     method = 'Telnet'
                 else:
                     method = 'Unknown'
-                print '!!! Connecting to %s (%s) using %s (%s) !!!' %(dev.host, dev.ip, method, proxy)
+                print(f'!!! Connecting to {dev.host} ({dev.ip}) using {method} ({proxy}) !!!')
             try:
                 dev.connect(debug, timeout)
             except RcmdError as e:
                 if e.value == 'ERROR: Unknown device type':
-                    print '%s - %s %s (%s)' %(e.value, host, ip, proxy)
+                    print(f'{e.value} - {host} {ip} ({proxy})')
                     sys.exit(1)
                 if debug:
-                    print '%s - %s %s' %(e.value, host, ip)
+                    print(f'{e.value} - {host} {ip} ({proxy})')
             if dev.connected:
                 break
         if dev.connected:
             break
 
     if not dev.connected:
-        print 'ERROR: Unable to discover %s - %s' %(host, ip)
+        print(f'ERROR: Unable to discover {host} - {ip}')
         sys.exit(1)
 
     devprompt = dev.prompt
@@ -121,8 +85,8 @@ def main():
     dev.host = dev.host.lower()
     detected_hostname = detected_hostname.lower()
     if dev.host != detected_hostname:
-        sys.stdout.write('Hostname mismatch (Provided == %s but detected == %s) - ' %(dev.host, detected_hostname))
-    print '%s,%s,%s,%s,%s,%s' %(detected_hostname, dev.ip, dev.dtype, dev.conn, dev.proxy, dev.authid)
+        sys.stdout.write(f'Hostname mismatch (Provided == {dev.host} but detected == {detected_hostname}) - ')
+    print(f'{detected_hostname},{dev.ip},{dev.dtype},{dev.conn},{dev.proxy},{dev.authid}')
 
     dev.disconnect()
 
