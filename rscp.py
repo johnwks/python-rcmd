@@ -44,12 +44,12 @@ def main():
     ff.close()
 
     cmdline = f'{SCP} {file} {dev.username}@{dev.ip}:{remotedir}'
-    print(f'Executing command - {cmdline}')
+    print(f'Executing command on {host} {dev.ip} - {cmdline}')
     try:
         child = pexpect.spawn(cmdline)
         child.expect('assword:')
         child.sendline(dev.password)
-        child.interact()
+        child.wait()
         print('Done')
     except (pexpect.EOF, pexpect.TIMEOUT) as e:
         print(f'{e.value} - {host}')
